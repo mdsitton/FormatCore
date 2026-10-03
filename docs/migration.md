@@ -4,7 +4,8 @@ How each sibling replaces its copies with FormatCore's components. Every step fo
 in the sibling, one component at a time, its instruction counts before and after, its full
 verification, a commit naming the FormatCore version. KdlBeef first, then TomlBeef; XmlBeef and
 JsonBeef when their sessions are idle and the author agrees. Paths are relative to
-`~/development`, at the commits the surveys read (plan.md §1).
+each sibling's repository (https://github.com/mdsitton/<Name>), at the commits the surveys read
+(plan.md §1).
 
 ## 0. Hooking FormatCore up
 

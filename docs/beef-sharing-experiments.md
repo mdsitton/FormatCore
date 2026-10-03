@@ -5,9 +5,11 @@ How Beef behaves when the code the four format libraries share moves into a sepa
 measured result, the explanation from the compiler source, and the rule for FormatCore's design. The
 summary table of rules and the blockers are at the end.
 
-- Toolchain: BeefBuild 0.43.6 (`/opt/BeefLang`), Linux64, LLVM codegen; Windows through
-  `~/development/beef-proton/bin/beefbuild-win`. Source references are to the local checkout
-  `~/development/Beef` (HEAD `09e4aa68`); `IDEHelper/Compiler/` is abbreviated `C/`, `IDE/src/` as `IDE/`.
+- Toolchain: BeefBuild 0.43.6, Linux64, LLVM codegen; Windows through the Windows BeefBuild under
+  Proton (`beefbuild-win`). Source references are to the Beef source at `09e4aa68`
+  (https://github.com/mdsitton/Beef, branch `fix/posix-spawn-workingdir`: upstream
+  https://github.com/beefytech/Beef plus one fix); `IDEHelper/Compiler/` is abbreviated `C/`,
+  `IDE/src/` as `IDE/`.
 - Performance figures are user-space instructions (`perf stat -e instructions:u`), never time: two runs
   that differ by five passes over a 100 MiB buffer, so startup and buffer filling cancel out. They are
   deterministic: every rerun gave the same three digits.

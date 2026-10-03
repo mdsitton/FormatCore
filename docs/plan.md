@@ -1,7 +1,7 @@
 # FormatCore: plan and handoff
 
 FormatCore is the shared core of the author's four Beef format libraries — TomlBeef, KdlBeef, XmlBeef
-and JsonBeef (`~/development/<Name>`). Each was built from the previous one by copying and refining, so
+and JsonBeef (https://github.com/mdsitton/<Name>). Each was built from the previous one by copying and refining, so
 about a third of each is the same machinery under four prefixes: input cursors, UTF-8 validation and
 SWAR scanning, line counting and error location, error carriers and diagnostics, arenas and node
 tables, positions and style sidecars, number parsing and formatting, the comptime typed-mapping

@@ -3,7 +3,7 @@
 Scope: what of TomlBeef, KdlBeef, XmlBeef and JsonBeef's compile-time typed mapping (part A) and of
 their test, tester, benchmark and agent tooling (part B) can move into FormatCore, and how. Read-only
 survey of the four repositories as of 2026-10-03 (TomlBeef `cd799f0`; the others at their HEADs of that
-day). Paths are relative to `~/development/`. "T/K/X/J" abbreviate the four siblings.
+day). Paths start at the repository name (https://github.com/mdsitton/<Name>). "T/K/X/J" abbreviate the four siblings.
 
 ---
 
@@ -199,7 +199,7 @@ Questions for the cross-project experiments (two hops: FormatCore → format lib
 | Q7 | Incremental rebuild: does editing FormatCore's comptime code re-run generation in the user project? (stale generated code risk) | developer loop, CI |
 | Q8 | Are `[Comptime]` methods of a dependency kept out of the runtime binary (size), and does a non-`[Comptime]` helper (Naming) used at both times work? | binary size, dual use |
 | Q9 | Does the build error from `Runtime.FatalError` raised two frames into FormatCore still point at the user's type/attribute? | error UX, fixture greps |
-| Q10 | Same on Windows through beef-proton | the siblings verify Windows |
+| Q10 | Same on Windows (the Windows BeefBuild under Proton) | the siblings verify Windows |
 | Q11 | `[XObject]` on a generic type (`class Box<T>`): is `ApplyToType` run per specialization? (untested in all four) | scope of the planner |
 
 ### A10. Tests the core needs
@@ -311,7 +311,7 @@ X 10, J 12 (+ lua, perl).
 
 ### B4. Windows and AGENTS.md
 
-- `~/development/beef-proton` (not a git repo, no README): `bin/beefbuild-win` 39 lines (Proton's wine,
+- The Windows wrapper (a local Proton setup, not a published repository): `beefbuild-win` 39 lines (Proton's wine,
   `WINEPREFIX=$ROOT/prefix`, pre-started `wineserver`, `-workspace=Z:<PWD>`), `bin/pwsh-win` 37, the prefix,
   downloads, smoke checks. K/X/J AGENTS.md (K:10-11, X:11-12, J:11-12) and status baselines (K :15 79/79, X :18
   256/256, J :17 281/281) use it; **TomlBeef's AGENTS.md:8 and architecture.md:11 still call Windows deferred**, and its

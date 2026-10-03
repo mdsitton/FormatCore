@@ -3,7 +3,7 @@
 What the four siblings duplicate in their document stores, node tables, maps, metadata sidecars,
 number handling, writers and edit tooling, and what a shared FormatCore component for each would
 look like. Read-only survey of the code at: TomlBeef `cd799f0`, KdlBeef `84f2bc2`, XmlBeef `d1ee13e`,
-JsonBeef `7959c3f` (all clean). Paths are relative to `~/development`; `T/`, `K/`, `X/`, `J/` stand
+JsonBeef `7959c3f` (all clean). Paths start at the repository name (https://github.com/mdsitton/<Name>); `T/`, `K/`, `X/`, `J/` stand
 for `TomlBeef/src/TomlBeef/`, `KdlBeef/src/KdlBeef/`, `XmlBeef/src/XmlBeef/`, `JsonBeef/src/JsonBeef/`.
 Reader-side topics (cursors, UTF-8, scanning, errors) are in `survey-input.md`; typed mapping and test
 tooling in `survey-typed-and-tooling.md`.

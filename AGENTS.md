@@ -3,8 +3,9 @@
 ## Notes for coding agents
 
 - This repository is a Beef language project: **FormatCore**, the shared core library of four
-  format libraries by the same author — TomlBeef (`~/development/TomlBeef`), KdlBeef
-  (`~/development/KdlBeef`), XmlBeef (`~/development/XmlBeef`) and JsonBeef (`~/development/JsonBeef`).
+  format libraries by the same author — TomlBeef (https://github.com/mdsitton/TomlBeef), KdlBeef
+  (https://github.com/mdsitton/KdlBeef), XmlBeef (https://github.com/mdsitton/XmlBeef) and JsonBeef
+  (https://github.com/mdsitton/JsonBeef).
   It holds what they duplicate (input cursors, UTF-8 and scanning, encodings, errors and diagnostics,
   limits, arenas and node tables, numbers, the typed-mapping generator framework, test and benchmark
   tooling); `docs/plan.md` says what moves here, in which order, and how each sibling migrates.
@@ -22,8 +23,8 @@
   step).
 - Beef `String` stores UTF-8 data and is mutable. Prefer `StringView` for borrowed string inputs.
 - Beef uses manual and scope-based memory management. There is no tracing garbage collector.
-- This project currently targets Linux64 first; Windows is verified with the Proton-hosted Beef
-  (`~/development/beef-proton/bin/beefbuild-win`), as in TomlBeef.
+- This project currently targets Linux64 first; Windows is verified with the Windows BeefBuild under
+  Proton (a `beefbuild-win` wrapper on the PATH, `bash ./win-test.sh`), as in the siblings.
 - Preferred CLI tool: `beefbuild` on Linux, `BeefBuild` on Windows. Use from `PATH`.
 - Start with `docs/plan.md` (the plan and handoff), the surveys of what the siblings duplicate
   (`docs/survey-input.md`, `docs/survey-data.md`, `docs/survey-typed-and-tooling.md`),
@@ -54,7 +55,7 @@ This block is FormatCore's `docs/agents-common.md`, written into each repository
 - **Use US English spellings** in code, comments and documentation (neighbor, color, behavior).
 - **Commit as Matthew Sitton <matthewsitton@gmail.com>**: `git -c user.name="Matthew Sitton" -c user.email="matthewsitton@gmail.com" commit ...` (the global git identity can differ).
 - **Windows is verified**, not deferred: the `[Test]`s run under the Proton-hosted Windows Beef
-  (`~/development/beef-proton/bin/beefbuild-win`) in Test and TestRelease (`bash ./win-test.sh`)
+  (a `beefbuild-win` wrapper on the PATH, or `BEEFBUILD_WIN`) in Test and TestRelease (`bash ./win-test.sh`)
   before committing.
 - **Benchmarks do not wait for a quiet machine** (this machine never is): a benchmark's `run.sh` samples until each run converges and repeats processes until enough agree within ±10% (`bench/compare/measure.sh`, from FormatCore's bench-kit), marking a cell that never settles `~`. Run it as it is, whatever the load; report the load average and the `~` cells with the figures, and rerun (`ONLY=...`) cells that did not settle before drawing conclusions from them. A cell past its time limit is DNF, not waited out. Small changes are compared with `bench/instructions.sh` (user-space instructions per input byte), which the load does not disturb.
 - **Run shell scripts with bash** (`bash ./script.sh`): the interactive shell is not bash, and unquoted variables do not word-split.
@@ -202,8 +203,9 @@ Frame #0 is the crash point. Mangled names map to files (`bf::FormatCore::ByteCu
 
 ## References
 
-- The four siblings, each with `docs/architecture.md` and `docs/status.md`: `~/development/TomlBeef`,
-  `~/development/KdlBeef`, `~/development/XmlBeef`, `~/development/JsonBeef`
-- Official Beef documentation: `https://www.beeflang.org/docs/`; docs source `~/development/Beef_website`
-- Beef language and tool source: `~/development/Beef`
-- TomlBeef (design and code to port): `~/development/TomlBeef`, especially `docs/architecture.md`
+- The four siblings, each with `docs/architecture.md` and `docs/status.md`:
+  https://github.com/mdsitton/TomlBeef, https://github.com/mdsitton/KdlBeef,
+  https://github.com/mdsitton/XmlBeef, https://github.com/mdsitton/JsonBeef
+- Official Beef documentation: https://www.beeflang.org/docs/; docs source
+  https://github.com/beefytech/Beef_website
+- Beef language and tool source: https://github.com/beefytech/Beef

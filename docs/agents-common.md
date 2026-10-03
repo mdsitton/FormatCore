@@ -13,7 +13,7 @@ This block is FormatCore's `docs/agents-common.md`, written into each repository
 - **Use US English spellings** in code, comments and documentation (neighbor, color, behavior).
 - **Commit as Matthew Sitton <matthewsitton@gmail.com>**: `git -c user.name="Matthew Sitton" -c user.email="matthewsitton@gmail.com" commit ...` (the global git identity can differ).
 - **Windows is verified**, not deferred: the `[Test]`s run under the Proton-hosted Windows Beef
-  (`~/development/beef-proton/bin/beefbuild-win`) in Test and TestRelease (`bash ./win-test.sh`)
+  (a `beefbuild-win` wrapper on the PATH, or `BEEFBUILD_WIN`) in Test and TestRelease (`bash ./win-test.sh`)
   before committing.
 - **Benchmarks do not wait for a quiet machine** (this machine never is): a benchmark's `run.sh` samples until each run converges and repeats processes until enough agree within ±10% (`bench/compare/measure.sh`, from FormatCore's bench-kit), marking a cell that never settles `~`. Run it as it is, whatever the load; report the load average and the `~` cells with the figures, and rerun (`ONLY=...`) cells that did not settle before drawing conclusions from them. A cell past its time limit is DNF, not waited out. Small changes are compared with `bench/instructions.sh` (user-space instructions per input byte), which the load does not disturb.
 - **Run shell scripts with bash** (`bash ./script.sh`): the interactive shell is not bash, and unquoted variables do not word-split.

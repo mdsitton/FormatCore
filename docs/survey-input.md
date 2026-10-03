@@ -292,7 +292,7 @@ scan has a byte tail loop. Beef exposes no trailing-zero count, so JSON's `First
 | Xml | `XmlEncodingTables` (531 lines, generated, WHATWG indexes pinned by SHA-256), `XmlEncoder` (134, the reverse for `WriteBytes`), `XmlEncoding` (enum and fallback, converter delegate) | ~15 KB of tables |
 | Json | `JsonChar.DetectWideEncoding` (:399), `JsonInputStart.Check` | Rejects UTF-16 and UTF-32 by BOM or by RFC 4627 §3 zero patterns, as `UnsupportedEncoding` ("transcode it first") |
 | Toml, Kdl | none | UTF-8 only by spec; UTF-16 input fails as invalid UTF-8 at offset 0 |
-| StrikeCore | `ParsingTools.cs DetectEncoding` (C#, `~/development/strikeline/...`) | Ported into XML's detector. Its heuristic (no BOM and invalid UTF-8 means Latin-1) became the opt-in `EncodingFallback.Windows1252` |
+| StrikeCore | `ParsingTools.cs DetectEncoding` (C#, the StrikeCore package) | Ported into XML's detector. Its heuristic (no BOM and invalid UTF-8 means Latin-1) became the opt-in `EncodingFallback.Windows1252` |
 
 ### 3.2 Recommendation
 
