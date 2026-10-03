@@ -172,6 +172,7 @@ internal struct TranscodingStreamCursor<TText, TDetect> : IInputCursor where TTe
 	/// @param state The buffers and error storage (reset here).
 	/// @param settings The cursor settings.
 	/// @param transcode The converter and the fallback.
+	[Inline]
 	public this(Stream stream, TranscodingState state, InputSettings settings, TranscodeSettings transcode)
 	{
 		mStream = stream;
