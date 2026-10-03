@@ -72,8 +72,12 @@ static class DocumentStorageTests
 		Test.Assert(!side.InUse && side.Get(5) == 0);
 		side.ClearAt(3, 10);
 		Test.Assert(!side.InUse);
+		Test.Assert(side.IsEmpty);
 		side.At(4) = 44;
-		Test.Assert(side.InUse && side.Count == 5 && side.Get(4) == 44 && side.Get(2) == 0);
+		Test.Assert(side.InUse && !side.IsEmpty && side.Count == 5 && side.Get(4) == 44 && side.Get(2) == 0);
+		side[4] = 45;
+		Test.Assert(side[4] == 45);
+		side[4] = 44;
 		side.At(1) = 11;
 		side.At(2) = 22;
 		// Old 0..4 → keep 1 at 0, 4 at 1, 2 at 2
