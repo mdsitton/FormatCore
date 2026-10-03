@@ -28,16 +28,16 @@ Last reviewed: 2026-10-03.
 | Phase 5 document infrastructure (§5); bug 3 fixed in `ByteHash`/`OrderedMap` | Done except a generic `Compact` |
 | Phase 6 encodings (§7) and testing helpers (§9) | Done except the items below |
 | Phase 7 TomlBeef on the window cursor | Not started (a TomlBeef migration step) |
-| Sibling migrations (plan §5, `docs/migration.md`) | None yet: each needs the author's go-ahead |
+| Sibling migrations (plan §5, `docs/migration.md`) | KdlBeef done (2026-10-03, its `e769dfc`..`57401fe`; equal or fewer instructions per byte in every mode, bugs B1 and B4 fixed there, `migration.md` §9 has the lessons); TomlBeef, XmlBeef, JsonBeef to do |
 
 ## Bugs found in the siblings (fixed in FormatCore; each sibling gets the fix when it migrates)
 
 | ID | Sibling | Bug | FormatCore |
 |----|---------|-----|------------|
-| B1 | all four generators | Converter/subtype lookups use `AlwaysVisible`: silently empty with a second dependent of the format library | `MappingDriver` + `Registry` (mixin stage); `tests/registry` |
+| B1 | all four generators | Converter/subtype lookups use `AlwaysVisible`: silently empty with a second dependent of the format library | `MappingDriver` + `Registry` (mixin stage); `tests/registry`. **Fixed in KdlBeef** (`aa49e58`, fixture `OkRegisteredConverter`, which the old generator fails) |
 | B2 | TomlBeef `TomlParser.Values.bf:898` | Slow-path float parse follows the current culture's decimal separator (confirmed on Linux with a `,` culture) | `DecimalParse.ParseDouble`; `ParseDouble_IgnoresTheCurrentCulture` |
 | B3 | TomlBeef `TomlEntryMap.bf:241` | Unseeded table hash (hash flooding) | `ByteHash` seeded per table, `OrderedMap`; `IndexTests` |
-| B4 | KdlBeef, XmlBeef, JsonBeef generators | `IntegerRange` minimum for uint64 is `int64.MinValue` | `IntegerBounds`; `IntegerBounds_UInt64StartsAtZero` |
+| B4 | KdlBeef, XmlBeef, JsonBeef generators | `IntegerRange` minimum for uint64 is `int64.MinValue` | `IntegerBounds`; `IntegerBounds_UInt64StartsAtZero`. **Fixed in KdlBeef** (`aa49e58`) |
 | B5 | XmlBeef `XmlNameTable` hash | 4-7 byte keys OR two overlapping words (`<< 24`): keys differing in their first and last bytes collide under every seed (found in phase 5) | `ByteHash` (`<< 32`); `ByteHash_UsesEveryByte` |
 | B6 | all four (allocator path of typed reads) | corlib's `BumpAllocator(DestructorHandlingKind)` constructor ignores its argument; under `.Allow` an object read through the allocator deletes bump-owned Strings (`free(): invalid pointer`). Not yet checked in the siblings | noted; the toy format sets `DestructorHandling` after construction |
 
@@ -45,9 +45,10 @@ Last reviewed: 2026-10-03.
 
 | ID | Item | Size |
 |----|------|------|
-| M | Sibling migrations (plan §5, `docs/migration.md`), KdlBeef first: sync the scripts, then one component at a time with instruction counts | — per step |
+| M | Sibling migrations (plan §5, `docs/migration.md`): TomlBeef next (fixes B2, B3; Phase 7 cursor adapter), then XmlBeef (B5) and JsonBeef; one component at a time with instruction counts (`migration.md` §9) | — per step |
+| K | KdlBeef follow-ups that need FormatCore: `RangeTable`/`SideTable` adoption, the shared `Planner` for its generator, `bench/compare/run.sh` on the vendored `measure.sh`/`merge.sh` (its `status.md` item F) | M |
 | C | Generic `Compact` (GrowList records + `Tree.LiveOrder` + `SideTable.Remap` + a text-move hook) for KdlBeef/JsonBeef | M |
-| T | Phase 6 tooling rest: `svgplot.py`, fetch/build helpers, round-trip driver; `-bench-loop` in TomlTester and KdlTester before they adopt `instructions.sh` | M |
+| T | Phase 6 tooling rest: `svgplot.py`, fetch/build helpers, round-trip driver; `-bench-loop` in TomlTester before it adopts `instructions.sh` (KdlTester has it) | M |
 | P4 | Typed mapping rest: polymorphic dispatch in the toy format, a shared ShowGenerated helper | S-M |
 | E | XmlBeef's `book-utf16` instruction count (43 → 11 per byte must hold) when it adopts the encodings module | S |
 | Q | Open questions for the author (`plan.md` §9). Decided by default in this pass: Q5 tolerance ±10% (AGENTS.md's rule), Q6 int64 offsets in error carriers and int32 in `RangeRecord`, Q7 JsonBeef's UTF-8 wording (KDL/XML/TOML goldens change when they migrate), Q8 shared `Tree` over accessors (measured equal), Q10 enum case names follow the declaring level's naming | — |

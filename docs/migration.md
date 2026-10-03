@@ -8,10 +8,13 @@ JsonBeef when their sessions are idle and the author agrees. Paths are relative 
 
 ## 0. Hooking FormatCore up
 
-1. In the sibling's library `BeefProj.toml`: `FormatCore = {Git = "<one URL, the same in all four>",
-   Version = "x.y"}` once FormatCore has a remote (plan.md §9 Q2); until then, and for local
-   development always, list `FormatCore = {Path = "../FormatCore"}` in the sibling's
-   `BeefSpace.toml` `[Projects]` and `FormatCore = "*"` in the library's dependencies.
+1. In the sibling's library `BeefProj.toml`: `corlib = "*"` and
+   `FormatCore = {Git = "https://github.com/mdsitton/FormatCore.git", Version = "0.1"}`: **this exact
+   URL string in all four** (locks and version pooling key on it). The SSH form
+   (`git@github.com:mdsitton/FormatCore.git`) also resolves, but only for someone with a GitHub key;
+   HTTPS works for every user of the public repository. Every workspace of the sibling lists
+   `FormatCore = {Path = "../FormatCore"}` (relative to that workspace) in `[Projects]`, which
+   overrides the Git spec for local work.
 2. Files that use building blocks: `using FormatCore;` and `using internal FormatCore;`.
 3. Vendor the scripts: `bash ../FormatCore/tools/sync.sh .` (writes `test-leaks.sh`, `win-test.sh`, and
    `test-codegen.sh` where `tests/codegen` exists); add `bash ../FormatCore/tools/sync.sh . --check`
@@ -134,3 +137,53 @@ Windows line and drops the load refusal in `update-tomlbeef.sh`). Testers depend
 `FormatCore.Testing` and delete their `Measure`, `PrintResult`, `ReadInputs`, `ReadStdin`, fuzz
 mutators and agreement code; `bench/instructions.conf` replaces each `instructions.sh` (TomlTester and
 KdlTester first need `-bench-loop`).
+
+## 9. KdlBeef: done (2026-10-03), and what it taught
+
+KdlBeef moved in eight commits (`e769dfc`..`57401fe`): tooling and `-bench-loop`; the dependency,
+`KdlText` and the UTF-8/hex helpers; `KdlParseError`/`KdlDiagnostic` typealiases; the cursors and line
+counter; numbers and `ErrorPolicy`; `GrowList`, `TextArena`, `ReadShell`; `Tree`; the `[KdlObject]`
+generator on `MappingDriver` with 14 build fixtures. Instructions per byte against 84f2bc2: events
+-0.3% to -7%, document -1.6% to -7.8%, stream -3% to -34%, write equal (KdlBeef's `docs/status.md` has
+the table). Its 79 tests, the spec suite in four modes, the round trips, leaks and Windows pass; no
+golden changed. Skipped, recorded in its status: `RangeTable`/`SideTable` (its node record keeps
+inline entry-range fields), the shared `Planner` (the generator keeps its own role planning and uses
+FormatCore's driver, registry and helpers), `Limits.Exceeds` on hot counters.
+
+Lessons for TomlBeef, XmlBeef and JsonBeef:
+
+- **Measure every step, and expect ±1% from code layout.** Moving a component can change what LLVM
+  inlines elsewhere with no change in the code itself. Each fix KdlBeef needed was found by
+  comparing per-function `perf record -e instructions:u` profiles of the old and new Release builds
+  (a scratch `git worktree` of the previous commit, with the workspace's FormatCore path made
+  absolute, builds the old binary):
+  - FormatCore's cursor and the 69-byte `ParseError` are larger than the siblings' (KDL's was 56 and
+    49 bytes): declared before the reader core's hot fields they cost up to 1% (document reads).
+    **Declare `mCursor` and `mError` last** in the core class.
+  - FormatCore's number fast path made KDL's `ParseNumber` small enough for LLVM to inline it into
+    `ReadValueToken`, which then stopped being inlined into `ReadValue`: stream reads +2-4%. An
+    `[Inline]` on `ReadValueToken` (one caller) restored it.
+  - **`Limits.Exceeds(max, ++count)` increments with no limit set** (its argument is evaluated before
+    the call): +1% on a per-entry counter. Keep `max > 0 && ++count > max` for counters; `Exceeds` is
+    for values without side effects.
+  - The 69-byte error in `Result<Event, ParseError>` from `Next()` per event was suspected and ruled
+    out (an empty-failure path measured no better).
+- **`GrowList` now keeps a raw allocation** (an array object's header cost the writer 0.2%):
+  `GrowList<T>` for node tables is a free win over corlib `List<T>` (document reads -0.2% to -1%).
+- **`TextArena` beat the pool-recycling `BumpAllocator`** for document text: -1% to -3.4% on document
+  reads. TomlBeef's store also holds objects with destructors (tables, arrays): only its text
+  (`TomlTextArena`, comment text) is a direct candidate.
+- **The line counter is the big stream win**: KDL counted per code point; FormatCore's SWAR counter
+  made streams 9-34% cheaper. TomlBeef's stream cursor counts columns per byte today: expect the same.
+- **UTF-8 messages**: KDL's goldens pinned no UTF-8 wording, so `FindInvalid`'s JSON wording changed
+  nothing there. XmlBeef's 951 and TomlBeef's position tests may pin it: regenerate and review.
+- **Typed mapping on the driver without the planner works** and fixes bug 1: emit signatures plus
+  `MappingDriver.EmitEntry` in `ApplyToType`, make every body `MappingDriver.AppendBody`, filter
+  `Type.TypeDeclarations` with `Registry.IsVisible` in the body stage. Two traps: a body that itself
+  mixes in another library method (`Compiler.Mixin(Lib.Dispatch(...))`) is a new evaluation whose
+  entry is the library: generate that code inline in the body instead; and per-type data that ApplyToType
+  used to emit as a sized static array (`sKdlClaimed`) needs the registry too: emit
+  `static T[] sX = X_() ~ delete _;` with `X_`'s body mixed in. The old generator fails
+  KdlBeef's `OkRegisteredConverter` fixture (a converter in the user's project, a second project
+  depending on the library); add that fixture to each sibling as its bug-1 regression.
+- `box` is a reserved word in Beef (a fixture named a local `box` and failed to parse).
