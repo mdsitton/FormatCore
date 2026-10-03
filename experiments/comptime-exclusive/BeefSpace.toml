@@ -1,0 +1,11 @@
+FileVersion = 1
+
+# The comptime experiment's Core and FormatLib with a single dependent (App): App is
+# DependencyKind_Dependent_Exclusive from FormatLib's side, so its declarations are AlwaysVisible.
+[Workspace]
+StartupProject = "App"
+
+[Projects]
+Core = {Path = "../comptime/Core"}
+FormatLib = {Path = "../comptime/FormatLib"}
+App = {Path = "App"}

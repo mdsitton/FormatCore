@@ -1,0 +1,9 @@
+FileVersion = 1
+
+[Project]
+Name = "FormatLib"
+TargetType = "BeefLib"
+
+[Dependencies]
+corlib = "*"
+Core = "*"

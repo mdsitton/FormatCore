@@ -1,0 +1,10 @@
+FileVersion = 1
+
+[Project]
+Name = "App"
+StartupObject = "App.Program"
+
+# Only FormatLib: Core comes in transitively
+[Dependencies]
+corlib = "*"
+FormatLib = "*"

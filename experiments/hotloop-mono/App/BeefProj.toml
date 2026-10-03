@@ -1,0 +1,8 @@
+FileVersion = 1
+
+[Project]
+Name = "App"
+StartupObject = "App.Program"
+
+[Dependencies]
+corlib = "*"

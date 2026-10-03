@@ -1,0 +1,10 @@
+FileVersion = 1
+
+# In the workspace, but neither a dependency nor a dependent of App
+[Project]
+Name = "OtherLib"
+TargetType = "BeefLib"
+
+[Dependencies]
+corlib = "*"
+FormatLib = "*"

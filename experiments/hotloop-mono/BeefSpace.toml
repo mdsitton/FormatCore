@@ -1,0 +1,10 @@
+FileVersion = 1
+
+[Workspace]
+StartupProject = "App"
+
+[Projects]
+App = {Path = "App"}
+
+[Configs.ReleaseNoLTO.Linux64]
+LTOType = "None"

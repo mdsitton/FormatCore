@@ -1,0 +1,17 @@
+FileVersion = 1
+
+[Workspace]
+StartupProject = "App"
+
+[Projects]
+Core = {Path = "Core"}
+FormatLib = {Path = "FormatLib"}
+UserLib = {Path = "UserLib"}
+OtherLib = {Path = "OtherLib"}
+App = {Path = "App"}
+
+[Configs.Debug.Win64]
+Toolset = "LLVM"
+
+[Configs.Release.Win64]
+Toolset = "LLVM"

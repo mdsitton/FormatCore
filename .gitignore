@@ -1,0 +1,20 @@
+build/
+dist/
+bin/
+obj/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+BeefSpace_User.toml
+BeefSpace_Lock.toml
+
+# Test script logs
+test-*.log
+
+# Experiments and benchmark builds
+experiments/*/build/
+bench/*/build/

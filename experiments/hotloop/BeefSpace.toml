@@ -1,0 +1,18 @@
+FileVersion = 1
+
+[Workspace]
+StartupProject = "App"
+
+[Projects]
+Core = {Path = "Core"}
+App = {Path = "App"}
+
+# Release without ThinLTO (Beef's Linux/Windows Release default is LTOType = "Thin")
+[Configs.ReleaseNoLTO.Linux64]
+LTOType = "None"
+
+[Configs.Debug.Win64]
+Toolset = "LLVM"
+
+[Configs.Release.Win64]
+Toolset = "LLVM"

@@ -1,0 +1,9 @@
+FileVersion = 1
+
+[Workspace]
+StartupProject = "App"
+
+[Projects]
+Core = {Path = "Core"}
+LibX = {Path = "LibX"}
+App = {Path = "App"}

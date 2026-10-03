@@ -1,0 +1,9 @@
+FileVersion = 1
+
+[Workspace]
+StartupProject = "App"
+
+[Projects]
+Core = {Path = "Core"}
+FormatLib = {Path = "FormatLib"}
+App = {Path = "App"}
