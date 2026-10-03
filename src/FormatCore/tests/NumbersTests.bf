@@ -143,6 +143,19 @@ static class NumbersTests
 		Test.Assert(DecimalParse.TryParseInt64("1_000_000", let million) && million == 1000000);
 		Test.Assert(DecimalParse.TryParseUInt64("18446744073709551615", let umax) && umax == uint64.MaxValue);
 		Test.Assert(!DecimalParse.TryParseUInt64("18446744073709551616", ?));
+		Test.Assert(!DecimalParse.TryParseUInt64("28446744073709551615", ?));
+		Test.Assert(!DecimalParse.TryParseUInt64("184467440737095516150", ?));
+		// Leading zeros are not significant digits; underscores are skipped
+		Test.Assert(DecimalParse.TryParseUInt64("0000018446744073709551615", let padded) && padded == uint64.MaxValue);
+		Test.Assert(DecimalParse.TryParseUInt64("18_446_744_073_709_551_615", let grouped) && grouped == uint64.MaxValue);
+		Test.Assert(DecimalParse.TryParseInt64("-9223372036854775808", let min) && min == int64.MinValue);
+		Test.Assert(!DecimalParse.TryParseInt64("-9223372036854775809", ?));
+		Test.Assert(!DecimalParse.TryParseInt64("", ?) && !DecimalParse.TryParseInt64("-", ?));
+		// The plain paths without separators give the same values
+		Test.Assert(DecimalParse.ParseDouble("1.7976931348623157e309", let huge, false) && huge.IsInfinity);
+		Test.Assert(DecimalParse.ParseDouble("123456789012345678901234567890", let big, false) && big == 1.2345678901234568e29);
+		Test.Assert(DecimalParse.ParseFloat32("7.038531e-26", var small, false));
+		Test.Assert(*(uint32*)&small == 0x15AE43FD);
 		Test.Assert(DecimalParse.TryParseUInt64("-0", let negativeZero) && negativeZero == 0);
 		Test.Assert(!DecimalParse.TryParseUInt64("-1", ?));
 		Test.Assert(!DecimalParse.TryParseInt64("", ?) && !DecimalParse.TryParseInt64("1.5", ?));
