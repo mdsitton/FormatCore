@@ -71,6 +71,27 @@ internal static class Tree<TRecord, TZeroIsNode> where TRecord : struct, ITreeRe
 		p.SetLastChildAndCount(child, p.ChildCount + 1);
 	}
 
+	/// @brief LinkLastFresh for a builder that has set the child's Parent itself (JsonBeef's fast build
+	/// fills the new record first): the parent's links and the previous sibling only.
+	/// @param nodes The node table.
+	/// @param parent The parent (the child's Parent already).
+	/// @param child The child, a zeroed record but for its Parent.
+	/// @param childRecord The child's record (the caller holds it).
+	[Inline]
+	public static void AppendFresh(TRecord* nodes, uint32 parent, uint32 child, ref TRecord childRecord)
+	{
+		ref TRecord p = ref nodes[parent];
+		uint32 last = p.LastChild;
+		if (last == 0)
+			p.FirstChild = child;
+		else
+		{
+			nodes[last].Next = child;
+			childRecord.Prev = last;
+		}
+		p.SetLastChildAndCount(child, p.ChildCount + 1);
+	}
+
 	/// @brief Link the unlinked node `child` before `sibling`, under the sibling's parent.
 	/// @param nodes The node table.
 	/// @param sibling The linked node to precede.
