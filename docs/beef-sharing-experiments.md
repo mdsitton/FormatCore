@@ -427,6 +427,32 @@ per-type objects (`Core_ReaderCore_App_AppCursor.obj`, …), correct results for
 under Wine, and `PassGeneric` (located through the PDB's `S_LPROC32`) contains no calls and the folded
 `0x3c3c…`/`0x2626…` immediates. Instruction counts were not taken on Windows (Wine).
 
+## Q8. FormatCore's cursors under a reader core
+
+**Experiment:** `experiments/cursor-fold` (FormatCore by path, App with a reader core generic over
+`IInputCursor` written as the siblings write theirs: the window in fields, `Scan.Until<TStops>` on
+locals, `Grow` through `Fill`, resuming after a refill). The same stop-byte scan as Q1 over 100 MiB
+(a stop every 61 bytes, no newlines); `bash experiments/cursor-fold/measure.sh [Release|ReleaseNoLTO]`.
+
+| Mode | What | Release | ReleaseNoLTO |
+|---|---|---:|---:|
+| direct | the scan loop over a plain buffer (control) | 3.459 | 3.656 |
+| memory | `ReaderCore<ByteCursor<UncheckedText>>` (no up-front validation) | 3.656 | 3.656 |
+| validated | `ByteCursor<PlainUtf8Text>`: `FindInvalid` over the input in Begin, then the scan | 4.093 | 4.093 |
+| validate | `Utf8.FindInvalid<PlainUtf8Text>` alone (ASCII input) | 0.438 | 0.438 |
+| stream | `BufferedStreamCursor<UncheckedText>` over a MemoryStream, 64 KiB buffer | 6.728 | 6.729 |
+| stream-validated | the same with up-front validation | 7.167 | 7.168 |
+
+- The memory cursor's `Fill` folds: without LTO the cursor reader is the direct loop's 3.656 exactly;
+  with ThinLTO the control's loop gets the 0.2-per-byte better shape (Q1's code-shape variance between
+  functions, not a call: the core has none).
+- Validation adds exactly its own cost (0.438 per byte on ASCII, the 32-byte plain-word step).
+- The stream's extra ~3 per byte is the copy out of the MemoryStream plus the line counting of every
+  dropped byte (16 bytes per step) and, because this input has no newline, a column count over the
+  whole dropped region at each refill. Real text has short lines (the column base moves to the last
+  line start). This is the siblings' design unchanged (JsonBeef's stream cursor), measured here only
+  as a baseline for the sibling migrations, which compare against each sibling's own numbers.
+
 ## Summary of rules
 
 | # | Do | Never |

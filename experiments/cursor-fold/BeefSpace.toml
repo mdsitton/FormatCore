@@ -1,0 +1,13 @@
+FileVersion = 1
+
+# Does a reader core generic over FormatCore's IInputCursor cost what a hand-written loop over the
+# same bytes costs? (measure.sh; plan.md §3 "no sibling gets slower", survey-input.md §1.3 risks)
+[Workspace]
+StartupProject = "App"
+
+[Projects]
+FormatCore = {Path = "../.."}
+App = {Path = "App"}
+
+[Configs.ReleaseNoLTO.Linux64]
+LTOType = "None"
