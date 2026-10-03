@@ -1,0 +1,10 @@
+FileVersion = 1
+
+# A user library: App depends on it
+[Project]
+Name = "UserLib"
+TargetType = "BeefLib"
+
+[Dependencies]
+corlib = "*"
+ToyFormat = "*"

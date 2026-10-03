@@ -69,3 +69,68 @@ scanners, error kinds and every message not produced by shared code.
 The proof for each step is the sibling's own: instruction counts (events, document, stream columns)
 equal or better, its full verification, and its stream-versus-memory tests
 (`KdlStreamTests`, `XmlStreamTests`, the JSON fuzz stream sweep).
+
+## 4. Numbers (phase 3)
+
+| FormatCore | Replaces |
+|---|---|
+| `DecimalParse.TryClinger`, `ParseDouble`, `ParseFloat32`, `TryParseInt64/UInt64`, `ClassifyInteger` | JsonBeef `JsonNumber.bf` (`TryClinger`, `TryParsePlainDouble`/`ParseDoubleSlow`, `ParseFloat`, `TryParseInt64/UInt64`, integer `Classify`) |
+| `DecimalParse.TryParsePlain(.LeadingZerosAndPlus)`, `ParseDouble`, `TryParseRadix` | KdlBeef `KdlReader.Values.bf:244` `TryParsePlainNumber`, `:209` underscore stripping + `double.Parse`, the radix loops `:149-205` |
+| `DecimalParse.TryParsePlain(.PlusSign)`, `ParseDouble` | TomlBeef `TomlParser.Values.bf:556/:586`, `ParseFloatToken` `:884-898` (**fixes B2**) |
+| `ShortestDouble` (`.JsonPlain`, `.EcmaScript`, `.KdlCanonical`, `.TomlCanonical`, `FloatLayout.Scientific`) | JsonBeef `AppendDouble`/`AppendFloat`/`AppendLayout`; KdlBeef `KdlCanonical.bf:410`; TomlBeef `TomlWriter.bf:205`, `TomlWriter.Formats.bf:204` + `ReformatExponent` |
+| `IntegerText`, `AppendGrouped` | TomlBeef `TomlWriter.Formats.bf:11`, `EmitGroupedDigits*` (`:375/:395/:501`) |
+| `BigDecimal.AppendRadixAsDecimal`, `AppendExact` | KdlBeef `KdlCanonical.bf:322`; JsonBeef `AppendHexAsDecimal`, `JsonPatch.bf:590` |
+
+Differences: `ParseDouble` returns false where JsonBeef called FatalError; `AppendExact` normalizes
+trailing zeros into the power; non-finite values and TOML's `-0.0` stay with the format.
+
+## 5. Typed mapping (phase 4)
+
+| FormatCore.Mapping | Replaces (survey-typed-and-tooling.md A5) |
+|---|---|
+| `NamingPolicy`, `Naming.Apply` | `ApplyNaming` T:238, K:547, X:781, J:436 and the four naming enums (breaking for the attributes; KDL keeps its kebab default in its attribute) |
+| `Literal`, `IntegerBounds` (**fixes B4**) | `AppendLiteral` T:271, K:578, X:162, J:1029; `IntegerRange` T:292, K:599, X:183, J:1053 |
+| `Registry.FindConverter`, `Registry.SubTypes` through `MappingDriver` (**fixes B1**) | `FindRegisteredConverter` T:202, K:474, X:700, J:415; `ChildTypes`/`SubTypes` K:494, X:720, J:330 |
+| `TypeShapes`, `Ownership`, `EnumEmit`, `CodeWriter` | `ListElement`/`DictionaryValue`/`DictionaryKey`/`KeyKind` ×4; T:426, K:796, X:407, J:693-757; J's `Emitter` (CodeGen:37) |
+| `Planner<TFormat>`, `ClaimSet`, `IMappingFormat` | J's `PlanType`/`PlanField`/`Spec`/`Classify` (Plan:89/176/262); claim bookkeeping in K:275 and X:327 |
+
+Each format keeps its attributes, roles, emit templates and runtime bind library. TOML, KDL and XML
+move to body-time planning (no type-init emission) and JsonBeef's inheritance model; enum case names
+follow the declaring level's naming (TOML wrote them as declared, KDL and XML used the enum type's
+naming: their goldens may change).
+
+## 6. Document infrastructure (phase 5)
+
+| FormatCore | Replaces |
+|---|---|
+| `ReadShell` | KdlBeef `KdlDocument.bf:319`, XmlBeef `XmlDocument.bf:481/494`, JsonBeef `JsonDocument.bf:338-370` |
+| `SideTable<T>` | KdlBeef `KdlDocument.Mutation.bf:113-139`, XmlBeef `XmlDocument.Mutation.bf:282-308` |
+| `RangeTable<TItem>` | KdlBeef `AppendEntry`/`RemoveEntry` (`:144/:177`), XmlBeef `AppendAttribute`/`RemoveAttributeAt` (`:313/:335`) |
+| `OrderedMap` (**fixes B3**) | TomlBeef `TomlEntryMap.bf` |
+| `OpenIdIndex` | JsonBeef `JsonMemberIndex.bf` |
+| `InternTable` (**fixes B5**) | XmlBeef `XmlNameTable.bf` (keeps a wrapper for QNames and `XmlNameId`) |
+| `Tree`, `PreorderWalk` | KdlBeef `KdlDocument.bf:490`, `KdlDocument.Mutation.bf:24-104`; XmlBeef `XmlDocument.bf:848`, `XmlDocument.Mutation.bf:15-42/:169/:200`; JsonBeef `JsonDocument.bf:638/:653`, `JsonDocument.Mutation.bf:79-115` |
+| `Marks` | XmlBeef `XmlDocument.Style.bf:201/210`, JsonBeef `JsonDocument.Style.bf:339` |
+
+## 7. Encodings (phase 6, XmlBeef)
+
+`XmlEncoding.bf`, `XmlEncodingTables.bf`, `XmlEncoder.bf` and its `tools/gen-encoding-tables.py` go
+whole (typealiases keep the public names); from `XmlEncodingDetector.bf`, `XmlDecoder` (:421-635),
+`Classify` (:366), `Prepare`/`CheckDeclarationLength`/`DecodeError`/`IsValidUtf8` (:191-266) and the
+BOM/UTF-7/EBCDIC checks of `Detect` (:60-102); `XmlBufferedStreamCursor`/`XmlStreamState` and
+`XmlByteCursor` become `TranscodingStreamCursor<XmlText, XmlDetector>` and
+`TranscodingByteCursor<XmlText, XmlDetector>`. XML keeps an `XmlDetector : IEncodingDetector`
+(declaration sniffing, conflicts, `<?xm` patterns) and its unencodable write policies. Message changes:
+`windows-1252` lowercase in fallback messages, "A token is longer than MaxTokenBytes", and its error
+kind mapping gains `InvalidEncoding`.
+
+## 8. Tooling
+
+`bash ../FormatCore/tools/sync.sh .` vendors `test-leaks.sh`, `win-test.sh`, `tools/test-lib.sh`,
+`test-codegen.sh` (with `tests/codegen`) and the bench-kit files (with `bench/compare`), and writes
+`docs/agents-common.md` into AGENTS.md between `<!-- FormatCore:agents-common begin -->` and `end`
+(add the markers once, replacing the repo's copy of the shared rules; TomlBeef also fixes its stale
+Windows line and drops the load refusal in `update-tomlbeef.sh`). Testers depend on
+`FormatCore.Testing` and delete their `Measure`, `PrintResult`, `ReadInputs`, `ReadStdin`, fuzz
+mutators and agreement code; `bench/instructions.conf` replaces each `instructions.sh` (TomlTester and
+KdlTester first need `-bench-loop`).

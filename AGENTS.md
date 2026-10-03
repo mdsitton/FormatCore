@@ -35,7 +35,7 @@
 
 ## Critical rules
 
-- **Verify Beef source/project changes.** After modifying `.bf`, `BeefProj.toml`, or workspace files, run the tests in **both** Debug and Release, for both workspaces: `beefbuild -test` and `beefbuild -test -config=TestRelease` (FormatCore), and the same with `-workspace=Testing` (FormatCore.Testing: `beefbuild -test` runs only the first project of a workspace). Debug catches runtime-check and allocator issues; Release catches optimizer-dependent bugs. Also `bash ./test-leaks.sh` (and `cd Testing && bash ../test-leaks.sh`), `bash tools/sync.sh . --check`, and the Windows tests (`bash ./win-test.sh`) before committing. A change to a component a sibling already uses is verified in that sibling too: its full verification (its AGENTS.md) and its instruction counts before and after. Report results. For docs-only edits, no build is required. If verification cannot be run, say why.
+- **Verify Beef source/project changes.** After modifying `.bf`, `BeefProj.toml`, or workspace files, run the tests in **both** Debug and Release: `beefbuild -test` and `beefbuild -test -config=TestRelease` (they run FormatCore's, FormatCore.Testing's and ToyTests' `[Test]`s, selected by `ConfigSelections` in `BeefSpace.toml`). Debug catches runtime-check and allocator issues; Release catches optimizer-dependent bugs. Also `bash ./test-leaks.sh`, `bash ./test-codegen.sh` and `bash tests/registry/run.sh` (typed mapping), `bash tools/sync.sh . --check`, and the Windows tests (`bash ./win-test.sh`) before committing. A change to a component a sibling already uses is verified in that sibling too: its full verification (its AGENTS.md) and its instruction counts before and after. Report results. For docs-only edits, no build is required. If verification cannot be run, say why.
 - The rest of the critical rules are the shared ones below.
 
 <!-- FormatCore:agents-common begin -->
@@ -95,7 +95,7 @@ These are non-obvious Beef behaviors discovered through debugging (in TomlBeef a
 ### Test framework
 
 - **`[Test]` methods must be static.**
-- **`beefbuild -test`** auto-discovers `[Test]` methods. No configuration needed. It runs the tests of the **first project listed** in the workspace's `[Projects]` only (not the startup project's, nor its dependencies'): a second project with tests needs its own workspace (FormatCore's `Testing/BeefSpace.toml`).
+- **`beefbuild -test`** auto-discovers `[Test]` methods. No configuration needed. It runs the tests of the **first project listed** in the workspace's `[Projects]`, and of another project only when the test config selects that project's Test config: `ConfigSelections = {Other = {Config = "Test"}}` under `[Configs.Test.<platform>]` and `[Configs.TestRelease.<platform>]` (FormatCore's `BeefSpace.toml`; Beef's own `IDEHelper/Tests` workspace does the same).
 - **Test assertions produce virtually no console output.** Debug test failures in a console app first, then port to `[Test]` once proven.
 - **`[Test(ShouldFail=true)]`** marks an expected failure. If the test passes, the framework reports "Test should have failed but didn't" as an error.
 - **A segfault in a test is never acceptable.** `ShouldFail` is for assertion failures, not crashes.
@@ -192,8 +192,8 @@ Frame #0 is the crash point. Mangled names map to files (`bf::FormatCore::ByteCu
 ## Build and Test Conventions
 
 - `beefbuild -help` is the source of truth for CLI flags.
-- `beefbuild -test` / `beefbuild -test -config=TestRelease` run the `[Test]` methods (add
-  `-workspace=Testing` for FormatCore.Testing's).
+- `beefbuild -test` / `beefbuild -test -config=TestRelease` run the `[Test]` methods of every test
+  project the workspace selects.
 - `bash ./test-leaks.sh` runs the `[Test]`s under LeakSanitizer; `bash ./win-test.sh` runs them on
   Windows (Test and TestRelease).
 - Performance is measured as user-space instructions (`perf stat -e instructions:u`) on fixed

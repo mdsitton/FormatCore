@@ -21,7 +21,12 @@ This is the handoff for the session that starts the implementation. Read with it
   (`experiments/`): the rules this plan builds on.
 - `AGENTS.md`, and each sibling's `docs/architecture.md` and `docs/status.md`.
 
-## 1. State (2026-10-03)
+## 1. State
+
+**2026-10-03, after the first implementation pass:** phases 0-6 are built in FormatCore (all but the
+items `status.md` lists as open), each component with its own tests; no sibling has migrated yet.
+`docs/architecture.md` is the design as built, `docs/migration.md` what each sibling replaces,
+`docs/status.md` the verification baseline. The table below is the state when this plan was written.
 
 | Path | What it is |
 |---|---|

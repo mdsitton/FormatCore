@@ -54,7 +54,7 @@ These are non-obvious Beef behaviors discovered through debugging (in TomlBeef a
 ### Test framework
 
 - **`[Test]` methods must be static.**
-- **`beefbuild -test`** auto-discovers `[Test]` methods. No configuration needed. It runs the tests of the **first project listed** in the workspace's `[Projects]` only (not the startup project's, nor its dependencies'): a second project with tests needs its own workspace (FormatCore's `Testing/BeefSpace.toml`).
+- **`beefbuild -test`** auto-discovers `[Test]` methods. No configuration needed. It runs the tests of the **first project listed** in the workspace's `[Projects]`, and of another project only when the test config selects that project's Test config: `ConfigSelections = {Other = {Config = "Test"}}` under `[Configs.Test.<platform>]` and `[Configs.TestRelease.<platform>]` (FormatCore's `BeefSpace.toml`; Beef's own `IDEHelper/Tests` workspace does the same).
 - **Test assertions produce virtually no console output.** Debug test failures in a console app first, then port to `[Test]` once proven.
 - **`[Test(ShouldFail=true)]`** marks an expected failure. If the test passes, the framework reports "Test should have failed but didn't" as an error.
 - **A segfault in a test is never acceptable.** `ShouldFail` is for assertion failures, not crashes.

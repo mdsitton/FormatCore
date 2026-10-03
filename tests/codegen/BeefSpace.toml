@@ -1,0 +1,12 @@
+FileVersion = 1
+
+# The typed-mapping framework's build-time checks (test-codegen.sh), through the toy format: each fixture
+# in src/Fixtures.bf is built alone (-define=FIXTURE_<name>) and must stop the build with its message,
+# or build when it is a positive control.
+[Workspace]
+StartupProject = "Fixtures"
+
+[Projects]
+FormatCore = {Path = "../.."}
+ToyFormat = {Path = "../toy"}
+Fixtures = {Path = "."}

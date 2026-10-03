@@ -19,3 +19,6 @@ win-test.log
 # Experiments and benchmark builds
 experiments/*/build/
 bench/*/build/
+
+# Agent worktrees
+.claude/worktrees/
