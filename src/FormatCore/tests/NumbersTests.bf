@@ -148,7 +148,7 @@ static class NumbersTests
 		// Leading zeros are not significant digits; underscores are skipped
 		Test.Assert(DecimalParse.TryParseUInt64("0000018446744073709551615", let padded) && padded == uint64.MaxValue);
 		Test.Assert(DecimalParse.TryParseUInt64("18_446_744_073_709_551_615", let grouped) && grouped == uint64.MaxValue);
-		Test.Assert(DecimalParse.TryParseInt64("-9223372036854775808", let min) && min == int64.MinValue);
+		Test.Assert(DecimalParse.TryParseInt64("-9223372036854775808", let smallest) && smallest == int64.MinValue);
 		Test.Assert(!DecimalParse.TryParseInt64("-9223372036854775809", ?));
 		Test.Assert(!DecimalParse.TryParseInt64("", ?) && !DecimalParse.TryParseInt64("-", ?));
 		// The plain paths without separators give the same values
