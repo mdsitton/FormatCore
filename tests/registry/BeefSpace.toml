@@ -1,0 +1,15 @@
+FileVersion = 1
+
+# Regression workspace for the converter-registry bug of the siblings' generators (plan.md §2.3 bug 1):
+# ToyFormat has three dependents here (UserLib, OtherLib, App), so a lookup filtering
+# `AlwaysVisible` from ApplyToType misses App's own converters. run.sh builds and runs App and checks
+# that the framework's mixin-stage lookup finds App's and UserLib's converters and not OtherLib's.
+[Workspace]
+StartupProject = "App"
+
+[Projects]
+FormatCore = {Path = "../.."}
+ToyFormat = {Path = "../toy"}
+UserLib = {Path = "UserLib"}
+OtherLib = {Path = "OtherLib"}
+App = {Path = "App"}

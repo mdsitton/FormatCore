@@ -373,7 +373,13 @@ internal static class Registry
 				continue;
 			let converter = declaration.ResolvedType;
 			if (found != null && found != converter)
-				Runtime.FatalError(scope $"{TFormat.ConverterAttributeName} Both {found.GetFullName(.. scope .())} and {converter.GetFullName(.. scope .())} are registered for {target.GetFullName(.. scope .())}. Keep one, or pick one per field with {TFormat.UseConverterAttributeName}.");
+			{
+				// Named in a stable order (declarations come in no fixed order)
+				let a = found.GetFullName(.. scope .());
+				let b = converter.GetFullName(.. scope .());
+				bool inOrder = String.Compare(a, b, false) <= 0;
+				Runtime.FatalError(scope $"{TFormat.ConverterAttributeName} Both {inOrder ? a : b} and {inOrder ? b : a} are registered for {target.GetFullName(.. scope .())}. Keep one, or pick one per field with {TFormat.UseConverterAttributeName}.");
+			}
 			found = converter;
 		}
 		return found;

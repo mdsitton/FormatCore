@@ -1,0 +1,11 @@
+FileVersion = 1
+
+# In the workspace, a dependent of ToyFormat and UserLib, but nothing App depends on
+[Project]
+Name = "OtherLib"
+TargetType = "BeefLib"
+
+[Dependencies]
+corlib = "*"
+ToyFormat = "*"
+UserLib = "*"
