@@ -23,8 +23,22 @@ internal class SideTable<T> where T : struct
 		get => mItems.Count > 0;
 	}
 
+	/// @brief Whether the table holds no records (not in use).
+	public bool IsEmpty
+	{
+		[Inline]
+		get => mItems.Count == 0;
+	}
+
 	/// @brief The number of records.
 	public int Count => mItems.Count;
+
+	/// @brief The record at `index`, which must be below Count (no growth: At grows).
+	public ref T this[int index]
+	{
+		[Inline]
+		get => ref mItems[index];
+	}
 
 	/// @brief The record at `index`, growing the table with default records to reach it (which puts
 	/// the table in use).

@@ -19,6 +19,13 @@ internal interface ITextPolicy
 	/// in the negative direction only (false sends the word to the byte checks).
 	static bool IsPlainWord(uint64 word);
 
+	/// Whether the 32 bytes of four consecutive words need no check at all (FindInvalid's first step).
+	/// The default asks IsPlainWord of each; a policy may test the block at once (XmlBeef's: one test of
+	/// the high bits and one of "every byte at least 0x20" for all four, the controls only when one is
+	/// below 0x20), which costs less than four early-out tests on text that has newlines.
+	[Inline]
+	static bool IsPlainBlock(uint64 a, uint64 b, uint64 c, uint64 d) => IsPlainWord(a) && IsPlainWord(b) && IsPlainWord(c) && IsPlainWord(d);
+
 	/// Whether the ASCII byte `b` (below 0x80) may appear.
 	static bool AllowsAscii(uint8 b);
 

@@ -24,6 +24,13 @@ internal class LineIndex<TText> where TText : ITextPolicy
 		mBuilt = false;
 	}
 
+	/// @brief Forget the index and free its memory (a document compacting itself).
+	public void Release()
+	{
+		Clear();
+		mStarts.TrimExcess(0);
+	}
+
 	/// @brief Whether the index has been built since the last Clear.
 	public bool IsBuilt => mBuilt;
 

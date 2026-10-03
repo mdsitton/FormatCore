@@ -91,13 +91,33 @@ internal static class Utf8
 	/// @param cp The code point (0-0x10FFFF, not a surrogate).
 	public static void Encode(String result, uint32 cp)
 	{
+		// One branch per length (XmlBeef's shape: sizing first and then branching again in the pointer
+		// version cost character references 0.3%)
 		if (cp < 0x80)
 		{
 			result.Append((char8)cp);
-			return;
 		}
-		int count = cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4;
-		Encode(result.PrepareBuffer(count), cp);
+		else if (cp < 0x800)
+		{
+			char8* p = result.PrepareBuffer(2);
+			p[0] = (char8)(0xC0 | (cp >> 6));
+			p[1] = (char8)(0x80 | (cp & 0x3F));
+		}
+		else if (cp < 0x10000)
+		{
+			char8* p = result.PrepareBuffer(3);
+			p[0] = (char8)(0xE0 | (cp >> 12));
+			p[1] = (char8)(0x80 | ((cp >> 6) & 0x3F));
+			p[2] = (char8)(0x80 | (cp & 0x3F));
+		}
+		else
+		{
+			char8* p = result.PrepareBuffer(4);
+			p[0] = (char8)(0xF0 | (cp >> 18));
+			p[1] = (char8)(0x80 | ((cp >> 12) & 0x3F));
+			p[2] = (char8)(0x80 | ((cp >> 6) & 0x3F));
+			p[3] = (char8)(0x80 | (cp & 0x3F));
+		}
 	}
 
 	/// @brief Whether the input starts with a UTF-8 byte order mark.
@@ -144,8 +164,7 @@ internal static class Utf8
 		int i = from;
 		while (i < to)
 		{
-			if (i + 32 <= to && TText.IsPlainWord(Swar.Load64(text + i)) && TText.IsPlainWord(Swar.Load64(text + i + 8)) &&
-				TText.IsPlainWord(Swar.Load64(text + i + 16)) && TText.IsPlainWord(Swar.Load64(text + i + 24)))
+			if (i + 32 <= to && TText.IsPlainBlock(Swar.Load64(text + i), Swar.Load64(text + i + 8), Swar.Load64(text + i + 16), Swar.Load64(text + i + 24)))
 			{
 				i += 32;
 				continue;
@@ -169,6 +188,22 @@ internal static class Utf8
 					}
 					i++;
 					continue;
+				}
+				if (i + 4 <= to)
+				{
+					// The common 2- and 3-byte sequences from one word (ValidSequenceLength's test); the others,
+					// and every error, take the exact path below
+					uint32 word = Swar.Load32(text + i);
+					int common = 0;
+					if (b >= 0xC2 && b < 0xE0 && (word & 0xC000) == 0x8000)
+						common = 2;
+					else if (b >= 0xE1 && b < 0xF0 && b != 0xED && (word & 0xC0C000) == 0x808000)
+						common = 3;
+					if (common != 0 && (!TText.BansCodePoints || TText.AllowsCodePoint((uint32)Decode(text, i, ?))))
+					{
+						i += common;
+						continue;
+					}
 				}
 				int seqLen = SequenceLength((char8)b);
 				if (seqLen == 0 || b == 0xC0 || b == 0xC1 || b > 0xF4)

@@ -24,6 +24,7 @@ internal struct TranscodingByteCursor<TText, TDetect> : IInputCursor where TText
 	/// @param state The transcoding buffers (reused across reads).
 	/// @param settings The cursor settings.
 	/// @param transcode The converter and the fallback.
+	[Inline]
 	public this(StringView input, TranscodingState state, InputSettings settings, TranscodeSettings transcode)
 	{
 		mInput = input;
@@ -172,6 +173,7 @@ internal struct TranscodingStreamCursor<TText, TDetect> : IInputCursor where TTe
 	/// @param state The buffers and error storage (reset here).
 	/// @param settings The cursor settings.
 	/// @param transcode The converter and the fallback.
+	[Inline]
 	public this(Stream stream, TranscodingState state, InputSettings settings, TranscodeSettings transcode)
 	{
 		mStream = stream;
