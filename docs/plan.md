@@ -117,9 +117,9 @@ by the author's say-so, or through the shared component that replaces it):
   sibling's AGENTS.md by the same sync script.
 - **Dependency** (Q4): each sibling's library project declares
   `FormatCore = {Git = "<one URL, identical in all four>", Version = "x.y"}`; consumers name only
-  the format library (Git dependencies are transitive and locked in the consumer's lock file). Local
-  development overrides it with `FormatCore = {Path = "../FormatCore"}` in the sibling's workspace.
-  Version constraints only warn, so the policy is: all four siblings move across FormatCore minor
+  the format library (Git dependencies are transitive and locked in the consumer's lock file). The
+  siblings' own workspaces use the same Git dependency (no committed path override: a fresh clone must
+  build on its own); a FormatCore change reaches them as a new tag. Version constraints only warn, so the policy is: all four siblings move across FormatCore minor
   versions together.
 
 ### 4.2 Components and their shared designs

@@ -352,10 +352,11 @@ Hash = "e3313f7c3dcc5ae04f6db9d0751efad3ffe34f77"
   constrain FormatCore differently, the highest matching tag is chosen for both, and an incompatible
   constraint is only a warning. Keep the siblings on the same FormatCore minor; do not rely on the
   constraint to protect a library.
-- For local development of FormatCore and a sibling together, list
-  `FormatCore = {Path = "../FormatCore"}` in the sibling's **workspace** (`BeefSpace.toml`, or a
-  separate dev workspace); the library's Git spec stays as it is. The same project can be referenced
-  by path in one workspace and by Git in another.
+- A workspace `{Path = …}` entry overrides the Git spec (the same project can be referenced by path in
+  one workspace and by Git in another), but **never commit one** in a sibling's workspace: a fresh
+  clone without the checkout beside it fails to load the project. The siblings' workspaces use the Git
+  dependency; a FormatCore change reaches them as a new tag (delete the lock to pick it up). A path
+  override is only for an uncommitted, local trial.
 - Tag FormatCore releases `vMAJOR.MINOR.PATCH`; an untagged dependency follows the default branch head.
 - Never name a FormatCore project after anything a user might also call a project (the name is global
   in a workspace).
@@ -467,7 +468,7 @@ locals, `Grow` through `Fill`, resuming after a refill). The same stop-byte scan
 | 3 | Handle the unspecialized generic pass; skip fields not declared by the planned type | Let `System.Object`'s `mClassVData`/`mDbgAllocInfo` into plans |
 | 3 | `Runtime.FatalError` with self-contained messages (located at the user's attribute) | |
 | 4 | Siblings depend on `FormatCore = {Git = "<one URL>", Version = "x.y"}`; consumers name only the format library | Different URL spellings across siblings; relying on version constraints to stop an incompatible FormatCore (only a warning) |
-| 4 | Local development: `FormatCore = {Path = …}` in the workspace | Editing the library's Git spec for local work |
+| 4 | Release FormatCore changes as tags; siblings pick them up through the Git dependency | Committing a `FormatCore = {Path = …}` override in a sibling's workspace (fresh clones fail); editing the library's Git spec for local work |
 | 5 | Emit fully qualified names; namespace `FormatCore`; distinctive type and attribute names | Unqualified names in emitted code (silent capture); short generic names (`Cursor`, `[Object]`) |
 | 6 | Split projects for ownership and versioning | Merge or split projects for build time or size (no effect) |
 

@@ -12,9 +12,11 @@ JsonBeef when their sessions are idle and the author agrees. Paths are relative 
    `FormatCore = {Git = "https://github.com/mdsitton/FormatCore.git", Version = "0.1"}`: **this exact
    URL string in all four** (locks and version pooling key on it). The SSH form
    (`git@github.com:mdsitton/FormatCore.git`) also resolves, but only for someone with a GitHub key;
-   HTTPS works for every user of the public repository. Every workspace of the sibling lists
-   `FormatCore = {Path = "../FormatCore"}` (relative to that workspace) in `[Projects]`, which
-   overrides the Git spec for local work.
+   HTTPS works for every user of the public repository. No workspace lists FormatCore: BeefBuild
+   fetches the highest matching tag and pins it in the workspace's `BeefSpace_Lock.toml`. A FormatCore
+   change reaches a sibling as a new `v0.1.x` tag (delete the sibling's lock to pick it up). Never
+   commit a `FormatCore = {Path = …}` override: a fresh clone without a FormatCore checkout beside it
+   then fails to load the project (the migrations did that at first; removed after a fresh-clone test).
 2. Files that use building blocks: `using FormatCore;` and `using internal FormatCore;`.
 3. Vendor the scripts: `bash ../FormatCore/tools/sync.sh .` (writes `test-leaks.sh`, `win-test.sh`, and
    `test-codegen.sh` where `tests/codegen` exists); add `bash ../FormatCore/tools/sync.sh . --check`
