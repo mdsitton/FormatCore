@@ -93,6 +93,42 @@ internal static class ReadShell
 		return StringView(bytes, filled);
 	}
 
+	/// @brief Read a whole file and append it to `text` (JsonBeef's JsonSerializer.ReadFile), as
+	/// ReadFileInto does into an arena: the file's size at opening is what is read.
+	/// @param path The file's path.
+	/// @param maxInputBytes The budget (0: no limit).
+	/// @param text Receives the bytes, as they are (no decoding).
+	/// @return .Ok, or the error.
+	public static Result<void, InputError> ReadFileText(StringView path, int maxInputBytes, String text)
+	{
+		let file = scope FileStream();
+		if (file.Open(path, .Read, .Read) case .Err)
+			return .Err(InputError(.IoError, "Cannot read the file", 0, 0, 0, 0));
+		int64 length = file.Length;
+		if (maxInputBytes > 0 && length > maxInputBytes)
+			return .Err(TooLarge(length, maxInputBytes));
+		int start = text.Length;
+		char8* bytes = text.PrepareBuffer((int)length);
+		int filled = 0;
+		while (filled < length)
+		{
+			switch (file.TryRead(.((uint8*)bytes + filled, (int)length - filled)))
+			{
+			case .Ok(let read):
+				if (read <= 0)
+				{
+					text.Length = start + filled;
+					return .Err(InputError(.IoError, "The file ended before its size", 0, 0, 0, 0));
+				}
+				filled += read;
+			case .Err:
+				text.Length = start + filled;
+				return .Err(InputError(.IoError, "Cannot read the file", 0, 0, 0, 0));
+			}
+		}
+		return .Ok;
+	}
+
 	static InputError TooLarge(int64 size, int maxInputBytes)
 	{
 		return InputError(.ResourceLimitExceeded, scope $"The input ({size} bytes) exceeds MaxInputBytes ({maxInputBytes})", 1, 1, 0, 0);
