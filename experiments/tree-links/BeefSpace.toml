@@ -1,0 +1,14 @@
+FileVersion = 1
+
+# Tree links through interface property accessors (Core's generic Tree over App's record) against
+# App's own code on the fields: bash measure.sh after beefbuild -config=Release / -config=ReleaseNoLTO.
+[Workspace]
+StartupProject = "App"
+
+[Projects]
+Core = {Path = "Core"}
+App = {Path = "App"}
+
+# Release without ThinLTO (Beef's Linux/Windows Release default is LTOType = "Thin")
+[Configs.ReleaseNoLTO.Linux64]
+LTOType = "None"
