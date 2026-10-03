@@ -187,3 +187,55 @@ Lessons for TomlBeef, XmlBeef and JsonBeef:
   KdlBeef's `OkRegisteredConverter` fixture (a converter in the user's project, a second project
   depending on the library); add that fixture to each sibling as its bug-1 regression.
 - `box` is a reserved word in Beef (a fixture named a local `box` and failed to parse).
+
+### JsonBeef: done (2026-10-03)
+
+JsonBeef moved in eleven commits (`8a406f7`..the docs commit, against 7959c3f): tooling (vendored
+scripts, bench-kit: `instructions.conf` with the typed and query columns through
+`instructions_command`, `run.sh` on `measure.sh`'s `settle` and `merge.sh`'s `saved_table_cell`,
+`c/bench.h` on `bench-core.h`); `JsonText` and the SWAR/UTF-8/hex helpers; the `JsonParseError` and
+`JsonDiagnostic` typealiases; the cursors (`JsonPushCursor` implements `IInputCursor`); `GrowList`,
+`TextArena`, `DecodeBuffer`; `BitStack`; `ReadShell` and `LineIndex`; `OpenIdIndex`; `Tree`; numbers;
+the `[JsonObject]` generator on `FormatCore.Mapping` with 18 fixtures. Every column of
+`bench/instructions.sh` (events, document, stream, write, typed, query, 16 inputs) is equal or lower
+except canada's and floats' reads, +0.03 to +0.16 (at most 0.4%); write is up to 7.4% lower, a lookup in
+a 2,000-member object 355 → 211 instructions. 281/281 tests, the suite in all modes, the fxx and RFC
+8785 corpora, fuzz, round trips, leaks and Windows pass; no golden changed (one unit test's I/O
+wording did: "Cannot read the file").
+
+FormatCore changes it needed (branch `migrate-json`):
+- `InputSettings.mUtf8Rule`: JsonBeef's goldens pin "(JSON must be UTF-8, RFC 8259 §8.1)".
+- `BitStack.Set`/`Get` by level: the reader keeps its own depth (push input restores it).
+- `ReadShell.ReadFileText` (a whole file into a `String`, the serializer's read).
+- `Tree.AppendFresh(nodes, parent, child, ref childRecord)`: `LinkLastFresh`'s extra parent store cost
+  JsonBeef's fast build 1-5% (its builders set the parent while filling the record).
+- `DecimalParse`: a `separators` flag on `ParseDouble`/`ParseDoubleSlow`/`ParseFloat32`/
+  `TryParseInt64`/`TryParseUInt64`/`ClassifyInteger` (inline dispatch: false is JsonBeef's plain loop,
+  no underscore scan, no stack buffer: the buffer in the same function cost canada's read 2.5%), and the
+  integer overflow check at the 20th digit only (it divided per digit).
+- `ShortestDouble.Append` inlined, with the digits out of line (`Digits`) and the EcmaScript/Scientific
+  layout inlined into the caller (`AppendDigits`), no `Append('0', 0)` calls: a caller with a constant
+  layout gets the layout's tests folded. Out of line, the general layout cost JsonBeef's write 2.5%;
+  inlined it beats JsonBeef's own layout code (floats 35.71 → 33.08).
+- `ValueSpec.mEnumNumbers` (EnumsAsNumbers), so the generator uses the shared `ValueSpec` and
+  `Ownership`.
+
+Lessons for XmlBeef and TomlBeef (and anyone moving hot code):
+- **Measure every call layer on a hot path, both ways.** The same shared function inlined or out of
+  line moved canada's numbers ±1-2.5% in different directions per caller: the fast build wanted the slow
+  float path inlined, the reader wanted it out of line (JsonBeef keeps an eight-line out-of-line corlib
+  call for its reader, documented). Profiles at this precision (perf at 20k-instruction periods)
+  attributed ±10% to the same function between runs: decide by `instructions.sh` counts only.
+- **Pass constants to inlined shared code** (`ShortestDouble.Append(output, v, .JsonPlain)` per branch,
+  not a runtime-chosen layout), the rule of beef-sharing-experiments.md Q1.
+- **Bodies through the driver, and nothing mixed in from the library inside a body**: JsonBeef's
+  discriminator dispatch was a nested `Compiler.Mixin(JsonSerializerCodeGen.TypeDispatch(...))`, which
+  kept subclass lookups relative to JsonBeef (bug 1 for subtypes: `OkPolymorphic` fails with the old
+  generator). Write such code inline in the body.
+- **The generator's ShowGenerated property** goes through the entry too (a part number), or its
+  planning would run with the library current.
+- **Beef's parser stumbles on `>>` and `>>>` inside a skipped `#if` region**, comments included: a
+  fixture file needs typealiases for nested generics and no such text in comments.
+- `KeptSource` fits a document that stores views; one storing offsets (JsonBeef) has nothing to gain.
+  `Marks` needs a `SideTable`, which grows with default records: style records with sentinel defaults
+  (JsonBeef's -1s) keep their own ten-line mark loop.
