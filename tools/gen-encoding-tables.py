@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+"""Generates src/FormatCore/Encoding/SingleByteTables.bf: the single-byte encodings FormatCore's Decoder
+and Encoder handle, from the WHATWG Encoding Standard's index data (XmlBeef's generator, moved here).
+
+    python3 tools/gen-encoding-tables.py     (downloads indexes.json and encodings.json, pinned below)
+
+The tables map bytes 0x80-0xFF to code points (0: the byte is not defined, an encoding error); bytes
+below 0x80 are ASCII in every one. Labels are the WHATWG ones, matched case-insensitively, except where
+WHATWG deliberately reads one encoding as another for web compatibility and a document format (which
+follows the IANA names, as XML 1.0 §4.3.3 does) does not:
+
+  - ISO-8859-1 and its labels are read as ISO-8859-1 (WHATWG: windows-1252), and US-ASCII and its
+    labels as US-ASCII; both are built into TextEncoding (no table), so they are left out here;
+  - ISO-8859-9 (WHATWG: windows-1254) and ISO-8859-11 / TIS-620 (WHATWG: windows-874) get their own
+    tables: the windows ones with 0x80-0x9F mapped to the C1 controls, which is what the ISO standards
+    define there (the printable ranges agree);
+  - ISO-8859-8-I reads as ISO-8859-8 (the difference is the direction of the text, not the bytes).
+
+The tables and the labels are generated into two types, so that a label lookup does not link the
+tables into a library that never decodes (SingleByteTables is touched only by Decoder and Encoder).
+
+The WHATWG data is (c) WHATWG (Apple, Google, Mozilla, Microsoft), CC BY 4.0; the tables are facts
+derived from it. Rerun after a deliberate pin bump and review the diff.
+"""
+
+import hashlib
+import json
+import os
+import sys
+import urllib.request
+
+INDEXES_URL = "https://encoding.spec.whatwg.org/indexes.json"
+INDEXES_SHA256 = "b7c8961095f0b4cae8f4a16a5011e7c84047a60c1277e28ee8df9e56074ee509"
+ENCODINGS_URL = "https://encoding.spec.whatwg.org/encodings.json"
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUTPUT = os.path.join(ROOT, "src", "FormatCore", "Encoding", "SingleByteTables.bf")
+
+# WHATWG index name -> TextEncoding case name
+ENCODINGS = [
+    ("ibm866", "Ibm866"),
+    ("iso-8859-2", "Iso8859_2"),
+    ("iso-8859-3", "Iso8859_3"),
+    ("iso-8859-4", "Iso8859_4"),
+    ("iso-8859-5", "Iso8859_5"),
+    ("iso-8859-6", "Iso8859_6"),
+    ("iso-8859-7", "Iso8859_7"),
+    ("iso-8859-8", "Iso8859_8"),
+    ("iso-8859-10", "Iso8859_10"),
+    ("iso-8859-13", "Iso8859_13"),
+    ("iso-8859-14", "Iso8859_14"),
+    ("iso-8859-15", "Iso8859_15"),
+    ("iso-8859-16", "Iso8859_16"),
+    ("koi8-r", "Koi8R"),
+    ("koi8-u", "Koi8U"),
+    ("macintosh", "Macintosh"),
+    ("x-mac-cyrillic", "MacCyrillic"),
+    ("windows-874", "Windows874"),
+    ("windows-1250", "Windows1250"),
+    ("windows-1251", "Windows1251"),
+    ("windows-1252", "Windows1252"),
+    ("windows-1253", "Windows1253"),
+    ("windows-1254", "Windows1254"),
+    ("windows-1255", "Windows1255"),
+    ("windows-1256", "Windows1256"),
+    ("windows-1257", "Windows1257"),
+    ("windows-1258", "Windows1258"),
+]
+
+# Labels read differently from WHATWG (see the docstring)
+LATIN1_AND_ASCII = {"ansi_x3.4-1968", "ascii", "cp819", "csisolatin1", "ibm819", "iso-8859-1", "iso-ir-100",
+                    "iso8859-1", "iso88591", "iso_8859-1", "iso_8859-1:1987", "l1", "latin1", "us-ascii"}
+ISO_8859_9 = {"csisolatin5", "iso-8859-9", "iso-ir-148", "iso8859-9", "iso88599", "iso_8859-9",
+              "iso_8859-9:1989", "l5", "latin5"}
+ISO_8859_11 = {"iso-8859-11", "iso8859-11", "iso885911", "tis-620"}
+
+
+def fetch(url):
+    with urllib.request.urlopen(url) as response:
+        return response.read()
+
+
+def main():
+    data = fetch(INDEXES_URL)
+    digest = hashlib.sha256(data).hexdigest()
+    if digest != INDEXES_SHA256:
+        sys.exit(f"indexes.json changed: SHA-256 {digest}, pinned {INDEXES_SHA256}; review and update the pin")
+    indexes = json.loads(data)
+    encodings = json.loads(fetch(ENCODINGS_URL))
+    labels = {}
+    for group in encodings:
+        for encoding in group["encodings"]:
+            for label in encoding["labels"]:
+                labels[label] = encoding["name"].lower()
+
+    tables = {case: indexes[name] for name, case in ENCODINGS}
+    c1 = list(range(0x80, 0xA0))
+    tables["Iso8859_9"] = c1 + indexes["windows-1254"][0x20:]
+    tables["Iso8859_11"] = c1 + indexes["windows-874"][0x20:]
+    by_name = {name: case for name, case in ENCODINGS}
+    by_name["iso-8859-8-i"] = "Iso8859_8"
+
+    label_cases = []
+    for label, name in sorted(labels.items()):
+        if label in LATIN1_AND_ASCII:
+            continue
+        if label in ISO_8859_9:
+            label_cases.append((label, "Iso8859_9"))
+        elif label in ISO_8859_11:
+            label_cases.append((label, "Iso8859_11"))
+        elif name in by_name:
+            label_cases.append((label, by_name[name]))
+
+    out = []
+    out.append("// Generated by tools/gen-encoding-tables.py from the WHATWG Encoding Standard's indexes.json")
+    out.append(f"// (SHA-256 {INDEXES_SHA256}; (c) WHATWG, CC BY 4.0). Do not edit: rerun the script.")
+    out.append("using System;")
+    out.append("using internal FormatCore;")
+    out.append("")
+    out.append("namespace FormatCore;")
+    out.append("")
+    out.append("/// The single-byte encodings' tables: bytes 0x80-0xFF to code points, 0 where a byte is not defined.")
+    out.append("/// Only Decoder and Encoder touch this type, so a library that never transcodes does not link it.")
+    out.append("internal static class SingleByteTables")
+    out.append("{")
+    for case in sorted(tables):
+        table = tables[case]
+        assert len(table) == 128
+        values = [0 if cp is None else cp for cp in table]
+        assert all(v < 0x10000 for v in values)
+        out.append(f"\tstatic uint16[128] s{case} = .(")
+        for row in range(0, 128, 16):
+            chunk = ", ".join(f"0x{v:04X}" for v in values[row:row + 16])
+            out.append(f"\t\t{chunk}{',' if row < 112 else ''}")
+        out.append("\t);")
+        out.append("")
+    out.append("\t/// @brief The table of a single-byte encoding.")
+    out.append("\t/// @param encoding The encoding.")
+    out.append("\t/// @return Its 128 code points for bytes 0x80-0xFF, or null for an encoding without a table.")
+    out.append("\tpublic static uint16* Get(TextEncoding encoding)")
+    out.append("\t{")
+    out.append("\t\tswitch (encoding)")
+    out.append("\t\t{")
+    for case in sorted(tables):
+        out.append(f"\t\tcase .{case}: return &s{case}[0];")
+    out.append("\t\tdefault: return null;")
+    out.append("\t\t}")
+    out.append("\t}")
+    out.append("}")
+    out.append("")
+    out.append("/// The WHATWG labels of the single-byte encodings (without ISO-8859-1 and US-ASCII, built in).")
+    out.append("internal static class SingleByteLabels")
+    out.append("{")
+    out.append("\t/// @brief The single-byte encoding a lowercase label names.")
+    out.append("\t/// @param label The label, lowercase.")
+    out.append("\t/// @param encoding Receives the encoding.")
+    out.append("\t/// @return Whether the label names one.")
+    out.append("\tpublic static bool TryGet(StringView label, out TextEncoding encoding)")
+    out.append("\t{")
+    out.append("\t\tencoding = .Utf8;")
+    out.append("\t\tswitch (label)")
+    out.append("\t\t{")
+    for label, case in label_cases:
+        out.append(f"\t\tcase \"{label}\": encoding = .{case};")
+    out.append("\t\tdefault: return false;")
+    out.append("\t\t}")
+    out.append("\t\treturn true;")
+    out.append("\t}")
+    out.append("}")
+    with open(OUTPUT, "w", newline="\n") as f:
+        f.write("\n".join(out) + "\n")
+    print(f"wrote {OUTPUT}: {len(tables)} tables, {len(label_cases)} labels")
+
+
+if __name__ == "__main__":
+    main()

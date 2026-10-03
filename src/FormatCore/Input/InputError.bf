@@ -18,7 +18,10 @@ internal enum InputErrorKind : uint8
 	/// MaxInputBytes or MaxTokenBytes exceeded.
 	ResourceLimitExceeded,
 	/// Reading the input failed.
-	IoError
+	IoError,
+	/// Bytes that are not valid in the input's (non-UTF-8) encoding: a byte a single-byte table leaves
+	/// undefined, a broken UTF-16 surrogate pair, a UTF-32 unit beyond U+10FFFF (transcoding cursors).
+	InvalidEncoding
 }
 
 /// An input error with its location. Like a format's parse error it owns nothing: `mMessage` views a
