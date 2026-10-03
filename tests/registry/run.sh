@@ -16,9 +16,9 @@ fi
 output=$("./build/${CONFIG}_Linux64/App/App" 2>&1)
 echo "$output"
 expected=(
-	"App.Station now: Local=FahrenheitToy Outside=CelsiusToy Inside=none "
-	"UserLib.Reading now: Outside=CelsiusToy Inside=none "
-	'App.Station written: {"Local":"70F","Outside":"21C","Inside":{"Value":294}}'
+	"App.Station now: Local=FahrenheitToy Outside=CelsiusToy Inside=none Figure=none(App.Square,UserLib.Shape,UserLib.Triangle) "
+	"UserLib.Reading now: Outside=CelsiusToy Inside=none Figure=none(UserLib.Shape,UserLib.Triangle) "
+	'App.Station written: {"Local":"70F","Outside":"21C","Inside":{"Value":294},"Figure":null}'
 )
 failed=0
 for line in "${expected[@]}"; do

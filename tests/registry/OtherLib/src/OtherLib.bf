@@ -13,6 +13,12 @@ public struct OtherCelsiusToy : IToyConverter<Celsius>
 	public static void Write(Celsius value, ToyNode node) => node.SetText("other");
 }
 
+/// A subtype App must not see.
+[ToyObject]
+public class Circle : Shape
+{
+}
+
 [ToyConverter(typeof(Kelvin))]
 public struct OtherKelvinToy : IToyConverter<Kelvin>
 {

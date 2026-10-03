@@ -17,12 +17,18 @@ struct FahrenheitToy : IToyConverter<Fahrenheit>
 	public static void Write(Fahrenheit value, ToyNode node) => node.SetText(scope $"{value.mValue}F");
 }
 
+[ToyObject]
+class Square : Shape
+{
+}
+
 [ToyObject(ShowRegistry = true)]
 class Station
 {
 	public Fahrenheit Local;
 	public Celsius Outside;
 	public Kelvin Inside;
+	public Shape Figure ~ delete _;
 }
 
 class Program

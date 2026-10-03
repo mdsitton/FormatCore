@@ -30,10 +30,23 @@ public struct Kelvin
 	public int32 Value;
 }
 
+/// A base class: its subtypes the user's project can see are UserLib's and App's, never OtherLib's.
+[ToyObject]
+public class Shape
+{
+	public int32 Sides;
+}
+
+[ToyObject]
+public class Triangle : Shape
+{
+}
+
 /// UserLib's own mapped type: planned with UserLib as the current project.
 [ToyObject(ShowRegistry = true)]
 public class Reading
 {
 	public Celsius Outside;
 	public Kelvin Inside;
+	public Shape Figure ~ delete _;
 }

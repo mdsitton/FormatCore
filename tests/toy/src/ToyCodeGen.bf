@@ -183,8 +183,24 @@ public static class ToyCodeGen
 		let text = scope String();
 		for (let member in plan.mMembers)
 		{
-			Type converter = member.mSpec.mConverter;
-			text.AppendF("{}={} ", member.mField.Name, (member.mSpec.mKind == .Converter) ? converter.GetName(.. scope .()) : "none");
+			let spec = member.mSpec;
+			text.AppendF("{}={}", member.mField.Name, (spec.mKind == .Converter) ? spec.mConverter.GetName(.. scope .()) : "none");
+			if (spec.mKind == .Object && !spec.mType.IsValueType)
+			{
+				// The classes a field of this class can hold, as the user's project sees them (sorted)
+				let types = scope List<Type>();
+				Registry.SubTypes<ToyMapping>(spec.mType, types);
+				let names = scope List<String>();
+				defer { ClearAndDeleteItems!(names); }
+				for (let type in types)
+					names.Add(type.GetFullName(.. new .()));
+				names.Sort(scope (a, b) => String.Compare(a, b, false));
+				text.Append("(");
+				for (int i < names.Count)
+					text.AppendF("{}{}", (i > 0) ? "," : "", names[i]);
+				text.Append(")");
+			}
+			text.Append(' ');
 		}
 		e.mCode.Append("return ");
 		Literal.Append(e.mCode, text);
