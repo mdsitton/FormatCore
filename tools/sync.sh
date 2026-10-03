@@ -5,8 +5,8 @@
 # and follow the same rules; --check reports copies that differ from FormatCore's (run it in each
 # repository's verification so they cannot drift again).
 # Usage: bash tools/sync.sh <repository> [--check]
-#   bash tools/sync.sh ../KdlBeef           write the copies and the AGENTS.md region
-#   bash tools/sync.sh ../KdlBeef --check   exit 1 if a copy or the region is missing or differs
+#   bash tools/sync.sh <repository>           write the copies and the AGENTS.md region
+#   bash tools/sync.sh <repository> --check   exit 1 if a copy or the region is missing or differs
 # The region is the lines between `<!-- FormatCore:agents-common begin -->` and
 # `<!-- FormatCore:agents-common end -->` in AGENTS.md: add the two markers once (where the shared rules
 # belong, replacing the repository's own copy of them); the sync never adds them by itself.

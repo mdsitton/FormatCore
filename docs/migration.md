@@ -12,15 +12,14 @@ JsonBeef when their sessions are idle and the author agrees. Paths are relative 
    `FormatCore = {Git = "https://github.com/mdsitton/FormatCore.git", Version = "0.1"}`: **this exact
    URL string in all four** (locks and version pooling key on it). The SSH form
    (`git@github.com:mdsitton/FormatCore.git`) also resolves, but only for someone with a GitHub key;
-   HTTPS works for every user of the public repository. No workspace lists FormatCore: BeefBuild
-   fetches the highest matching tag and pins it in the workspace's `BeefSpace_Lock.toml`. A FormatCore
-   change reaches a sibling as a new `v0.1.x` tag (delete the sibling's lock to pick it up). Never
-   commit a `FormatCore = {Path = …}` override: a fresh clone without a FormatCore checkout beside it
-   then fails to load the project (the migrations did that at first; removed after a fresh-clone test).
+   HTTPS works for every user of the public repository. BeefBuild fetches the highest matching tag
+   and pins it in the workspace's `BeefSpace_Lock.toml`; a FormatCore change reaches a sibling as a
+   new `v0.1.x` tag (delete the sibling's lock to pick it up). The sibling's workspaces list only its
+   own projects.
 2. Files that use building blocks: `using FormatCore;` and `using internal FormatCore;`.
-3. Vendor the scripts: `bash ../FormatCore/tools/sync.sh .` (writes `test-leaks.sh`, `win-test.sh`, and
-   `test-codegen.sh` where `tests/codegen` exists); add `bash ../FormatCore/tools/sync.sh . --check`
-   to the sibling's verification baseline in `docs/status.md`.
+3. Vendor the scripts: in a FormatCore checkout, `bash tools/sync.sh <sibling>` (writes
+   `test-leaks.sh`, `win-test.sh`, and `test-codegen.sh` where `tests/codegen` exists); add
+   `bash tools/sync.sh <sibling> --check` to the sibling's verification baseline in `docs/status.md`.
 
 ## 1. The text policy (first, everything else is generic over it)
 
@@ -131,7 +130,7 @@ kind mapping gains `InvalidEncoding`.
 
 ## 8. Tooling
 
-`bash ../FormatCore/tools/sync.sh .` vendors `test-leaks.sh`, `win-test.sh`, `tools/test-lib.sh`,
+`bash tools/sync.sh <sibling>` (in a FormatCore checkout) vendors `test-leaks.sh`, `win-test.sh`, `tools/test-lib.sh`,
 `test-codegen.sh` (with `tests/codegen`) and the bench-kit files (with `bench/compare`), and writes
 `docs/agents-common.md` into AGENTS.md between `<!-- FormatCore:agents-common begin -->` and `end`
 (add the markers once, replacing the repo's copy of the shared rules; TomlBeef also fixes its stale

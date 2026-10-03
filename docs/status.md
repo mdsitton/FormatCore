@@ -11,7 +11,7 @@ Last reviewed: 2026-10-03.
 | `bash ./test-leaks.sh` | PASS: no leaks detected |
 | `bash ./test-codegen.sh` | 13/13 fixtures as expected |
 | `bash tests/registry/run.sh` | PASS (mixin-stage lookups see the user's project and its dependencies only) |
-| `bash tools/test-number-corpus.sh` | fxx 1,414,285 lines and RFC 8785 100,000 lines, 0 mismatches (needs JsonBeef's fetched suites) |
+| `bash tools/test-number-corpus.sh <JsonBeef>/tests/suites` | fxx 1,414,285 lines and RFC 8785 100,000 lines, 0 mismatches (JsonBeef's fetched suites) |
 | `bash ./win-test.sh` (Test and TestRelease under Proton) | the same counts as Linux, both configs |
 | `bash tools/sync.sh . --check` | PASS |
 | `experiments/*/run.sh`, `*/measure.sh`, `experiments/buildcost.sh`, `bash experiments/deps/setup.sh run` | The results in `docs/beef-sharing-experiments.md` (Q1-Q8), `architecture.md` §5 (tree-links) |

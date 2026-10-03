@@ -350,11 +350,11 @@ format code (`TomlTestJson`, `JsonToToml`, `Canonical`, `Numbers`, `Push`, `Tric
 `Mutate` edits); `gen-inputs.py`, `reference.py`, harness sources per language, run.sh library tables and tracks, plot
 panels; T's lookup/modes/typed scripts; status tables (schema can be standardized).
 
-How siblings would reach shared scripts: by path (`${FORMATCORE:-../FormatCore}/tools/…`) since all live in
-`~/development`, or vendored copies refreshed by `tools/sync.sh` with a header naming the source commit. Beef code
-reaches FormatCore as a workspace project / package dependency (as BJSON reaches TomlTester). Path references break
-for anyone cloning one repo alone; vendored copies drift (today's problem) unless a check (`tools/sync.sh --check`)
-runs in each sibling's verification baseline. Recommend: Beef helpers as a dependency, scripts vendored with a check.
+How siblings would reach shared scripts: vendored copies refreshed by `tools/sync.sh` with a header naming the source
+commit, since a reference into another repository breaks for anyone cloning one repo alone. Beef code reaches
+FormatCore as a package (Git) dependency. Vendored copies drift (today's problem) unless a check
+(`tools/sync.sh --check`) runs in each sibling's verification baseline. Recommend: Beef helpers as a dependency,
+scripts vendored with a check.
 
 Risks: changing benchmark scripts changes published numbers' method (rerun baselines after the switch, one sibling
 at a time); the load-policy conflict needs a decision; X and J have active sessions touching run.sh and testers.
