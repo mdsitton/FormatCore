@@ -137,6 +137,38 @@ internal static class DecimalParse
 		return true;
 	}
 
+	/// @brief The plain integer alone, `[sign]digits` of 1-18 digits (it cannot overflow int64): the
+	/// cheapest test for the most common bare value, before TryParsePlain (TomlBeef's
+	/// TryParsePlainInteger: one length check, then one test per digit). Anything else returns false.
+	/// @param token The token (not empty).
+	/// @param rules Leading zeros and a `+` sign (a constant: the checks fold once inlined).
+	/// @param value Receives the value.
+	/// @return Whether the token was a plain integer.
+	[Inline]
+	public static bool TryParsePlainInteger(StringView token, PlainRules rules, out int64 value)
+	{
+		value = 0;
+		char8* ptr = token.Ptr;
+		int length = token.Length;
+		bool hasSign = ptr[0] == '-' || (((uint8)rules & (uint8)PlainRules.PlusSign) != 0 && ptr[0] == '+');
+		int pos = hasSign ? 1 : 0;
+		int digits = length - pos;
+		if (digits < 1 || digits > 18)
+			return false;
+		if (((uint8)rules & (uint8)PlainRules.LeadingZeros) == 0 && ptr[pos] == '0' && digits > 1)
+			return false;
+		int64 result = 0;
+		for (int i = pos; i < length; i++)
+		{
+			uint8 digit = (uint8)ptr[i] - (uint8)'0';
+			if (digit > 9)
+				return false;
+			result = result * 10 + digit;
+		}
+		value = ptr[0] == '-' ? -result : result;
+		return true;
+	}
+
 	/// @brief One-pass parse of the common numbers, `[sign]digits[.digits][(e|E)[sign]digits]` without
 	/// underscores (TomlBeef's TryParsePlainInteger and TryParsePlainFloat, KdlBeef's
 	/// TryParsePlainNumber): an integer of 1-18 digits (it cannot overflow int64), or a decimal whose
@@ -169,7 +201,9 @@ internal static class DecimalParse
 		}
 		uint64 mantissa = 0;
 		int intStart = pos;
-		while (pos < length && IsDigit(ptr[pos]) && pos - intStart < 19)
+		// At most 19 digits (an exact mantissa): the cap is part of the loop's bound, one test per digit
+		int intLimit = Math.Min(length, intStart + 19);
+		while (pos < intLimit && IsDigit(ptr[pos]))
 			mantissa = mantissa * 10 + ((uint8)ptr[pos++] - (uint8)'0');
 		int intDigits = pos - intStart;
 		if (intDigits == 0)
@@ -188,7 +222,8 @@ internal static class DecimalParse
 		{
 			pos++;
 			int fracStart = pos;
-			while (pos < length && IsDigit(ptr[pos]) && pos - fracStart + intDigits < 19)
+			int fracLimit = Math.Min(length, fracStart + 19 - intDigits);
+			while (pos < fracLimit && IsDigit(ptr[pos]))
 				mantissa = mantissa * 10 + ((uint8)ptr[pos++] - (uint8)'0');
 			if (pos == fracStart)
 				return false;
@@ -202,7 +237,8 @@ internal static class DecimalParse
 				negativeExponent = ptr[pos++] == '-';
 			int expStart = pos;
 			int expValue = 0;
-			while (pos < length && IsDigit(ptr[pos]) && pos - expStart < 4)
+			int expLimit = Math.Min(length, expStart + 4);
+			while (pos < expLimit && IsDigit(ptr[pos]))
 				expValue = expValue * 10 + ((uint8)ptr[pos++] - (uint8)'0');
 			if (pos == expStart)
 				return false;
