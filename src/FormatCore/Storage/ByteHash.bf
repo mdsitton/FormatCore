@@ -194,7 +194,8 @@ internal struct OpenIdIndex : IDisposable
 	[Inline]
 	public uint32 FindOrInsert<TKeys>(TKeys keys, StringView key, uint32 hash, uint32 newId, out bool added) mut where TKeys : IKeySource
 	{
-		if ((mCount + 1) * 2 > SlotCount)
+		// mMask is 0 without slots, so the first insertion grows too (no null test on this path)
+		if ((mCount + 1) * 2 > mMask + 1)
 			Grow();
 		int32 pos = (int32)hash & mMask;
 		while (true)
@@ -221,7 +222,8 @@ internal struct OpenIdIndex : IDisposable
 	/// @param id The ID (not 0).
 	public void Set<TKeys>(TKeys keys, StringView key, uint32 id) mut where TKeys : IKeySource
 	{
-		if ((mCount + 1) * 2 > SlotCount)
+		// mMask is 0 without slots, so the first insertion grows too (no null test on this path)
+		if ((mCount + 1) * 2 > mMask + 1)
 			Grow();
 		uint32 hash = HashOf(key);
 		int32 pos = (int32)hash & mMask;
@@ -249,7 +251,8 @@ internal struct OpenIdIndex : IDisposable
 	/// @param id The ID (not 0).
 	public void InsertNew(uint32 hash, uint32 id) mut
 	{
-		if ((mCount + 1) * 2 > SlotCount)
+		// mMask is 0 without slots, so the first insertion grows too (no null test on this path)
+		if ((mCount + 1) * 2 > mMask + 1)
 			Grow();
 		Place(((uint64)hash << 32) | id);
 		mCount++;
@@ -261,8 +264,28 @@ internal struct OpenIdIndex : IDisposable
 	/// @param ids The IDs, in order.
 	public void Rebuild<TKeys>(TKeys keys, Span<uint32> ids) mut where TKeys : IKeySource
 	{
+		Reset(ids.Length);
+		for (let id in ids)
+			Set(keys, keys.KeyOf(id), id);
+	}
+
+	/// @brief Index IDs 1 to `count` from scratch when their keys are known to be distinct (an ordered
+	/// map's entries): each is placed by its hash, with no key compared.
+	/// @param keys The key source.
+	/// @param count The number of IDs.
+	public void RebuildDistinct<TKeys>(TKeys keys, int count) mut where TKeys : IKeySource
+	{
+		Reset(count);
+		for (uint32 id = 1; id <= (uint32)count; id++)
+			Place(((uint64)HashOf(keys.KeyOf(id)) << 32) | id);
+		mCount = (int32)count;
+	}
+
+	/// Empty slots sized for `count` keys (at most half full).
+	void Reset(int count) mut
+	{
 		int32 size = 16;
-		while (size < ids.Length * 2 + 2)
+		while (size < count * 2 + 2)
 			size *= 2;
 		if (mSlots == null || mMask + 1 != size)
 		{
@@ -272,8 +295,6 @@ internal struct OpenIdIndex : IDisposable
 		else
 			Internal.MemSet(mSlots, 0, size * sizeof(uint64));
 		mCount = 0;
-		for (let id in ids)
-			Set(keys, keys.KeyOf(id), id);
 	}
 
 	/// @brief Remove every key, keeping the slots.

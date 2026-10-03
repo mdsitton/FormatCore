@@ -187,10 +187,8 @@ internal struct OrderedMap<TSlot, TLimit> : IDisposable where TSlot : struct, IK
 			return;
 		}
 		mIndexed = true;
-		uint32[] ids = scope uint32[mCount];
-		for (int i < mCount)
-			ids[i] = (uint32)i + 1;
-		mIndex.Rebuild(MakeKeys(), ids);
+		// Keys are distinct: each entry is placed by its hash, no key compared
+		mIndex.RebuildDistinct(MakeKeys(), mCount);
 	}
 
 	/// @brief The bytes the map holds.
