@@ -1,0 +1,12 @@
+FileVersion = 1
+
+# A toy format built only on FormatCore's typed-mapping framework (FormatCore.Mapping): [ToyObject]
+# maps fields to and from a ToyNode tree. Used by FormatCore's mapping tests (tests/mapping), the
+# codegen fixtures (tests/codegen) and the registry regression workspace (tests/registry).
+[Project]
+Name = "ToyFormat"
+TargetType = "BeefLib"
+
+[Dependencies]
+corlib = "*"
+FormatCore = "*"

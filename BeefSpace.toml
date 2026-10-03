@@ -5,11 +5,21 @@ StartupProject = "FormatCore"
 
 [Projects]
 FormatCore = {Path = "."}
+# The toy format on FormatCore.Mapping and its tests (never dependencies of FormatCore itself)
+ToyFormat = {Path = "tests/toy"}
+ToyTests = {Path = "tests/mapping"}
+
+# A project other than the startup one runs its [Test]s only when its Test configs are selected here
+# (as in Beef's own IDEHelper/Tests workspace)
+[Configs.Test.Linux64]
+ConfigSelections = {ToyTests = {Config = "Test"}}
 
 # Runs the [Test] methods with Release settings (O2, CRT allocator, no runtime checks):
 #   beefbuild -test -config=TestRelease
 [Configs.TestRelease.Linux64]
 BuildKind = "Test"
+# The project's Test config (its test build kind) under the workspace's Release settings
+ConfigSelections = {ToyTests = {Config = "Test"}}
 
 # Windows builds link with Beef's bundled lld-link (LLVM toolset) in every config. Beef defaults
 # Debug/Test to MSVC's link.exe; with LLVM, MSVC only supplies the CRT and Windows SDK libraries.
@@ -18,6 +28,7 @@ Toolset = "LLVM"
 
 [Configs.Test.Win64]
 Toolset = "LLVM"
+ConfigSelections = {ToyTests = {Config = "Test"}}
 
 [Configs.Release.Win64]
 Toolset = "LLVM"
@@ -25,3 +36,4 @@ Toolset = "LLVM"
 [Configs.TestRelease.Win64]
 BuildKind = "Test"
 Toolset = "LLVM"
+ConfigSelections = {ToyTests = {Config = "Test"}}

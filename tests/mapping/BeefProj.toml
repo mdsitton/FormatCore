@@ -1,0 +1,13 @@
+FileVersion = 1
+
+# FormatCore's typed-mapping tests: [Test]s of the code the toy format (tests/toy) generates through
+# FormatCore.Mapping. A separate project, so the toy format is never compiled into a library that
+# depends on FormatCore.
+[Project]
+Name = "ToyTests"
+TargetType = "BeefLib"
+
+[Dependencies]
+corlib = "*"
+FormatCore = "*"
+ToyFormat = "*"
