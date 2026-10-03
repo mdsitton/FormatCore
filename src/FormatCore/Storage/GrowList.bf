@@ -5,18 +5,26 @@ namespace FormatCore;
 
 /// A growable array of values (XmlBeef's XmlStack and JsonBeef's JsonStack, merged) for node tables
 /// and builder stacks: `Add`, `PopBack`, `Back` and the indexer are inlined, which corlib's List.Add and
-/// Count setter are not (each showed up in XmlBeef's profiles). Items are not bounds-checked beyond what
-/// the array does.
+/// Count setter are not (each showed up in XmlBeef's profiles). The items are a raw allocation, as in
+/// corlib's List (an array object's header cost KdlBeef's writer 0.2% in item reads). Items are not
+/// bounds-checked.
 internal class GrowList<T> where T : struct
 {
-	T[] mItems ~ delete _;
+	T* mItems;
+	int mCapacity;
 	int mCount;
 
 	/// @brief An empty list.
 	/// @param capacity The first capacity (at least 1).
 	public this(int capacity = 16)
 	{
-		mItems = new T[Math.Max(capacity, 1)];
+		mCapacity = Math.Max(capacity, 1);
+		mItems = new T[mCapacity]*;
+	}
+
+	public ~this()
+	{
+		delete mItems;
 	}
 
 	/// @brief The number of items; setting it lower (never higher) drops the items above.
@@ -39,7 +47,7 @@ internal class GrowList<T> where T : struct
 	public int Capacity
 	{
 		[Inline]
-		get => mItems.Count;
+		get => mCapacity;
 	}
 
 	/// @brief Append an item.
@@ -47,7 +55,7 @@ internal class GrowList<T> where T : struct
 	[Inline]
 	public void Add(T item)
 	{
-		if (mCount == mItems.Count)
+		if (mCount == mCapacity)
 			Grow();
 		mItems[mCount++] = item;
 	}
@@ -57,7 +65,7 @@ internal class GrowList<T> where T : struct
 	[Inline]
 	public ref T AddDefault()
 	{
-		if (mCount == mItems.Count)
+		if (mCount == mCapacity)
 			Grow();
 		mItems[mCount] = default;
 		return ref mItems[mCount++];
@@ -68,9 +76,9 @@ internal class GrowList<T> where T : struct
 	/// @return The first new item (one past the end when `count` is 0, even at full capacity).
 	public T* GrowUninitialized(int count)
 	{
-		if (mCount + count > mItems.Count)
+		if (mCount + count > mCapacity)
 			Reserve(mCount + count);
-		T* first = mItems.Ptr + mCount;
+		T* first = mItems + mCount;
 		mCount += count;
 		return first;
 	}
@@ -79,11 +87,17 @@ internal class GrowList<T> where T : struct
 	/// @param capacity The capacity.
 	public void Reserve(int capacity)
 	{
-		if (capacity <= mItems.Count)
+		if (capacity <= mCapacity)
 			return;
-		T[] old = mItems;
-		mItems = new T[Math.Max(capacity, old.Count * 2)];
-		Internal.MemCpy(mItems.Ptr, old.Ptr, mCount * strideof(T), alignof(T));
+		Reallocate(Math.Max(capacity, mCapacity * 2));
+	}
+
+	void Reallocate(int capacity)
+	{
+		T* old = mItems;
+		mItems = new T[capacity]*;
+		mCapacity = capacity;
+		Internal.MemCpy(mItems, old, mCount * strideof(T), alignof(T));
 		delete old;
 	}
 
@@ -92,21 +106,18 @@ internal class GrowList<T> where T : struct
 	public void TrimExcess(int minimum = 16)
 	{
 		int capacity = Math.Max(Math.Max(mCount, minimum), 1);
-		if (capacity >= mItems.Count)
+		if (capacity >= mCapacity)
 			return;
-		T[] old = mItems;
-		mItems = new T[capacity];
-		Internal.MemCpy(mItems.Ptr, old.Ptr, mCount * strideof(T), alignof(T));
-		delete old;
+		Reallocate(capacity);
 	}
 
 	/// @brief The bytes of the array.
-	public int ReservedBytes => mItems.Count * strideof(T);
+	public int ReservedBytes => mCapacity * strideof(T);
 
 	[NoInline]
 	void Grow()
 	{
-		Reserve(mItems.Count * 2);
+		Reserve(mCapacity * 2);
 	}
 
 	/// @brief Remove and return the last item.
@@ -135,7 +146,7 @@ internal class GrowList<T> where T : struct
 	public T* Ptr
 	{
 		[Inline]
-		get => mItems.Ptr;
+		get => mItems;
 	}
 
 	/// @brief Remove every item (the capacity stays).
@@ -146,7 +157,7 @@ internal class GrowList<T> where T : struct
 	}
 
 	/// @brief The items as a span (valid until the list changes).
-	public Span<T> Span => .(mItems.Ptr, mCount);
+	public Span<T> Span => .(mItems, mCount);
 }
 
 /// A stack of bits, one per nesting level (JsonBeef's object/array bits): push, pop and read the top

@@ -57,7 +57,10 @@ internal struct ErrorPolicy
 /// Resource-limit checks and their messages, as every format writes them ("X exceeds MaxY (n)").
 internal static class Limits
 {
-	/// @brief Whether `value` exceeds `limit` (a limit of 0 or less is no limit).
+	/// @brief Whether `value` exceeds `limit` (a limit of 0 or less is no limit). The value is computed
+	/// before the call, whatever the limit: never pass an expression with a side effect on a hot path
+	/// (`Exceeds(max, ++count)` counts even with no limit set, where `max > 0 && ++count > max` does
+	/// not; KdlBeef measured 1% on a per-entry counter).
 	/// @param limit The limit.
 	/// @param value The value.
 	/// @return Whether it is exceeded.
