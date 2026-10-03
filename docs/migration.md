@@ -276,3 +276,55 @@ Lessons for XmlBeef and TomlBeef (and anyone moving hot code):
 - `KeptSource` fits a document that stores views; one storing offsets (JsonBeef) has nothing to gain.
   `Marks` needs a `SideTable`, which grows with default records: style records with sentinel defaults
   (JsonBeef's -1s) keep their own ten-line mark loop.
+
+### XmlBeef: done (2026-10-03)
+
+XmlBeef moved in eleven commits from d1ee13e: tooling (vendored scripts, bench-kit with
+`bench/instructions.conf`, the AGENTS region; `measure.sh`'s tolerance went from XmlBeef's ±5% to
+±10%); the dependency, `XmlText` and the UTF-8/SWAR/hex helpers and validator (14 not-wf goldens
+changed wording only: the encoded-surrogate and beyond-U+10FFFF messages now name the bytes, same
+positions); `XmlParseError`/`XmlDiagnostic` typealiases; the encodings and cursors (`XmlEncoding`,
+`XmlEncodingFallback`, `XmlEncodingConverter` typealiases, `XmlDetector : IEncodingDetector`, the
+cursors as inlined adapters over the transcoding cursors, `XmlDecoder`/`XmlEncoder`/the tables and
+their generator deleted); `XmlStack`/`XmlTextArena`/the line index; the name table's hash through
+`ByteHash` (B5); the `[XmlObject]` generator on the driver (B1, B4; `XmlNaming` is `NamingPolicy`);
+typed doubles through `DecimalParse`; `ReadShell` and `KeptSource`; `Tree`; `SideTable` and
+`Marks.MarkChanged`; docs. Instructions per byte against d1ee13e: every cell of events, document,
+stream and stream4k equal or lower (streams -1.4% to -3.4%, osm stream 36.02 → 35.13), typed osm
+76.90 → 74.75, book-utf16 13.21 → 13.15 through a 4 KiB stream. 257 tests (one new: B5), the
+conformance suite in seven modes, the SVG corpus, round trips with mutation, collect-errors fuzzing,
+21 build fixtures (two new: `OkRegisteredConverter` with a second dependent project `Other`, which the
+old generator fails, and `OkSelfReference`), leaks and Windows pass.
+
+FormatCore changes this migration needed (all measured in XmlBeef):
+- `ITextPolicy.IsPlainBlock` (a static member with a default body: existing policies are unchanged):
+  FindInvalid's 32-byte step asks the policy. Four early-out IsPlainWord tests on text with newlines
+  cost XmlBeef's SVG event passes 3% over its own combined test (all ASCII, then all ≥ 0x20, the
+  controls only when one is below). Static interface members with default bodies work in Beef and
+  specialize like the others.
+- FindInvalid checks well-formed 2- and 3-byte sequences from one 32-bit load first.
+- `Utf8.Encode(String)` writes each length in its own branch (sizing first, then branching again in the
+  pointer version cost character references 0.3%).
+- `[Inline]` on both transcoding cursors' constructors: XmlBeef's svg-icons input is thousands of small
+  files, and an out-of-line constructor of the larger cursor cost its reads 0.8-1.3%.
+- `LineIndex.Release`; `SideTable`'s indexer and `IsEmpty` (the document's many reads by index stay).
+
+Not adopted (XmlBeef's status.md, item FC): `ErrorPolicy` (XML's recovery progress rule compares resume
+points, and its MaxErrors test counts the coming error: invariants test-collect.sh guards),
+`RangeTable` (its ranges carry a capacity XmlNodeRecord has no field for), `InternTable` (XML state per
+entry, QName splits and predefined names, on the start-tag path; the hash and seed are FormatCore's),
+the shared `Planner`.
+
+Lessons:
+- **Per-document setup counts on small-file inputs.** Anything a cursor constructs per read (settings,
+  detection, the cursor struct copied into the core) shows on an input of many small documents only:
+  keep constructors and the core's `Reset` inlined so the cursor is built in place.
+- **A format's adapter over a FormatCore cursor costs nothing** when every member is `[Inline]`: XmlBeef
+  kept `IXmlCursor` (XML errors, the encoding and BOM-override report) as thin structs over the
+  transcoding cursors, and its reader core did not change.
+- **Planning must move to the body stage, not just the bodies**: XmlBeef's ScanChain and PlanField
+  reached the converter registry through Classify, so its claimed names and virtual claim properties
+  became mixin parts too (static arrays from a field initializer whose method body is mixed in, as in
+  KdlBeef).
+- Error kinds: `InputErrorKind.InvalidEncoding` (decoding) and `InvalidUtf8` both map to XML's
+  `InvalidEncoding`; `ByteOrderMark` cannot occur (XML skips the BOM).
