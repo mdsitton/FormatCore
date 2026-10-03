@@ -87,6 +87,11 @@ static class InputTests
 				Test.Assert(indexedLine == line && indexedColumn == column);
 			}
 		}
+		// Released, it rebuilds on the next request
+		index.Release();
+		Test.Assert(!index.IsBuilt);
+		index.Locate("a\nb".Ptr, 3, 2, let releasedLine, let releasedColumn);
+		Test.Assert(index.IsBuilt && releasedLine == 2 && releasedColumn == 1);
 	}
 
 	/// Reads every byte through the cursor one at a time, locating every `locateEvery` bytes; the
