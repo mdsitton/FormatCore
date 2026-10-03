@@ -48,6 +48,8 @@ internal class ValueSpec
 	public int mFormatTag = -1;
 	/// An Object class the format dispatches to subtypes (IMappingFormat.IsPolymorphic).
 	public bool mPolymorphic;
+	/// An Enum the format writes as its integer value (JsonBeef's EnumsAsNumbers option).
+	public bool mEnumNumbers;
 
 	public this()
 	{

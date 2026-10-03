@@ -147,10 +147,19 @@ internal static class ShortestDouble
 	/// @param value The double.
 	/// @param layout The layout.
 	/// @return False (and nothing written) for a NaN or an infinity.
+	[Inline]
 	public static bool Append(String output, double value, FloatLayout layout)
 	{
 		if (!value.IsFinite)
 			return false;
+		if (layout.mNotation != .Native)
+		{
+			// The digits out of line (Digits), the layout inlined into the caller
+			char8[32] digits = ?;
+			int count = Digits(value, &digits, let point);
+			AppendDigits(output, &digits, count, point, FloatBits.IsNegative(value), layout);
+			return true;
+		}
 		char8[64] text = ?;
 		int length = double.[Friend]ToString_RoundTripFast(value, &text);
 		AppendText(output, &text, length, FloatBits.IsNegative(value), layout);
@@ -183,12 +192,29 @@ internal static class ShortestDouble
 		}
 		char8[32] digits = ?;
 		int count = DigitsOf(text, length, &digits, let point);
+		if (layout.mNotation == .Native)
+		{
+			// AppendNative writes the text's sign itself: here the sign is decided above (an unsigned zero)
+			if (negative && !(count == 0 && layout.mUnsignedZero))
+				output.Append('-');
+			AppendNative(output, text + (negative ? 1 : 0), length - (negative ? 1 : 0), layout);
+			return;
+		}
+		AppendDigits(output, &digits, count, point, negative, layout);
+	}
+
+	/// The EcmaScript and Scientific layouts of `count` digits with the point at `point`. Inlined, so a
+	/// caller with a constant layout gets its own copy with the layout's tests folded (JsonBeef's writer
+	/// measured 2.5% without).
+	[Inline]
+	static void AppendDigits(String output, char8* digits, int count, int point, bool negative, FloatLayout layout)
+	{
 		if (negative && !(count == 0 && layout.mUnsignedZero))
 			output.Append('-');
 		switch (layout.mNotation)
 		{
 		case .Native:
-			AppendNative(output, text + (negative ? 1 : 0), length - (negative ? 1 : 0), layout);
+			Runtime.FatalError("ShortestDouble: the Native layout needs corlib's text");
 		case .EcmaScript:
 			if (count == 0)
 			{
@@ -201,33 +227,36 @@ internal static class ShortestDouble
 			int k = count;
 			if (k <= n && n <= 21)
 			{
-				output.Append(&digits, k);
-				output.Append('0', n - k);
+				output.Append(digits, k);
+				// (No call for no zeros: most values have none)
+				if (n > k)
+					output.Append('0', n - k);
 				if (layout.mFraction != .None)
 					output.Append(".0");
 			}
 			else if (0 < n && n <= 21)
 			{
-				output.Append(&digits, n);
+				output.Append(digits, n);
 				output.Append('.');
-				output.Append(&digits[n], k - n);
+				output.Append(digits + n, k - n);
 			}
 			else if (-6 < n && n <= 0)
 			{
 				output.Append("0.");
-				output.Append('0', -n);
-				output.Append(&digits, k);
+				if (n < 0)
+					output.Append('0', -n);
+				output.Append(digits, k);
 			}
 			else
-				AppendScientific(output, &digits, k, n - 1, layout);
+				AppendScientific(output, digits, k, n - 1, layout);
 		case .Scientific:
 			if (count == 0)
 			{
-				digits[0] = '0';
-				AppendScientific(output, &digits, 1, 0, layout);
+				char8 zero = '0';
+				AppendScientific(output, &zero, 1, 0, layout);
 				return;
 			}
-			AppendScientific(output, &digits, count, point - 1, layout);
+			AppendScientific(output, digits, count, point - 1, layout);
 		}
 	}
 

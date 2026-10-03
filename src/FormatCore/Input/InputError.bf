@@ -102,6 +102,9 @@ internal struct InputSettings
 	public bool mIgnoreWideEncodings;
 	/// The format's name for messages ("JSON must be UTF-8"); empty: "the input".
 	public StringView mFormatName;
+	/// The rule a wide-encoding message cites in place of "<format> must be UTF-8", when not empty
+	/// (JsonBeef's "JSON must be UTF-8, RFC 8259 §8.1", which its goldens pin).
+	public StringView mUtf8Rule;
 
 	/// @brief The stream buffer's first size: StreamBufferBytes (0: 64 KiB), at least 16, and with a
 	/// MaxTokenBytes no more than it (a construct that would exceed the limit then always comes to
@@ -166,8 +169,12 @@ internal static class InputStart
 			if (!wide.IsEmpty)
 			{
 				let message = scope String();
-				message.AppendF("The input is {} ({} must be UTF-8): transcode it first", wide,
-					settings.mFormatName.IsEmpty ? "the input" : settings.mFormatName);
+				message.AppendF("The input is {} (", wide);
+				if (!settings.mUtf8Rule.IsEmpty)
+					message.Append(settings.mUtf8Rule);
+				else
+					message.AppendF("{} must be UTF-8", settings.mFormatName.IsEmpty ? "the input" : settings.mFormatName);
+				message.Append("): transcode it first");
 				return .Err(InputError(.UnsupportedEncoding, message, 1, 1, 0, 0));
 			}
 		}

@@ -59,6 +59,28 @@ static class StorageTests
 	}
 
 	[Test]
+	public static void BitStack_SetAndGetByLevel()
+	{
+		// A reader that keeps its own depth (JsonBeef's) sets and reads bits by level
+		var bits = BitStack();
+		defer bits.Dispose();
+		let random = scope Random(11);
+		bool[300] reference = default;
+		for (int round < 3000)
+		{
+			int level = random.Next(300);
+			bool bit = random.Next(2) == 1;
+			bits.Set(level, bit);
+			reference[level] = bit;
+			int probe = random.Next(300);
+			Test.Assert(bits.Get(probe) == reference[probe]);
+		}
+		for (int level < 300)
+			Test.Assert(bits.Get(level) == reference[level]);
+		Test.Assert(bits.Depth == 0);
+	}
+
+	[Test]
 	public static void DecodeBuffer_GrowsKeepingTheBytes()
 	{
 		let buffer = scope DecodeBuffer(16);
