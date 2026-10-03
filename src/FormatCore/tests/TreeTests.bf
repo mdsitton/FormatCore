@@ -230,8 +230,15 @@ static class TreeTests
 				nodes.Add(default);
 				p = nodes.Ptr;
 				uint32 id = model.Add();
-				if (random.Next(2) == 0)
+				int how = random.Next(3);
+				if (how == 0)
 					Tree<TRecord, TZero>.LinkLastFresh(p, target, id);
+				else if (how == 1)
+				{
+					// A builder that sets the new record's parent first
+					p[id].Parent = target;
+					Tree<TRecord, TZero>.AppendFresh(p, target, id, ref p[id]);
+				}
 				else
 					Tree<TRecord, TZero>.LinkLast(p, target, id);
 				model.mParent[id] = target;

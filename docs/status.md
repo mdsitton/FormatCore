@@ -6,7 +6,7 @@ Last reviewed: 2026-10-03.
 
 | Check | Expected result |
 |-------|-----------------|
-| `beefbuild -test` (Debug checks) | FormatCore 69/69, FormatCore.Testing 5/5, ToyTests 7/7 |
+| `beefbuild -test` (Debug checks) | FormatCore 70/70, FormatCore.Testing 5/5, ToyTests 7/7 |
 | `beefbuild -test -config=TestRelease` (Release settings) | the same |
 | `bash ./test-leaks.sh` | PASS: no leaks detected |
 | `bash ./test-codegen.sh` | 13/13 fixtures as expected |
@@ -27,17 +27,17 @@ Last reviewed: 2026-10-03.
 | Phase 4 typed mapping (§8); bugs 1 and 4 fixed in the framework | Done: framework, toy format, fixtures, registry workspace |
 | Phase 5 document infrastructure (§5); bug 3 fixed in `ByteHash`/`OrderedMap` | Done except a generic `Compact` |
 | Phase 6 encodings (§7) and testing helpers (§9) | Done except the items below |
-| Phase 7 TomlBeef on the window cursor | Not started (a TomlBeef migration step) |
-| Sibling migrations (plan §5, `docs/migration.md`) | KdlBeef done (2026-10-03, its `e769dfc`..`57401fe`; equal or fewer instructions per byte in every mode, bugs B1 and B4 fixed there, `migration.md` §9 has the lessons); TomlBeef, XmlBeef, JsonBeef to do |
+| Phase 7 TomlBeef on the window cursor | Done for streams (TomlBeef `TomlWindowCursor`, 20-68% fewer instructions); memory input keeps TOML's span cursor after `ByteCursor`'s checks (the window measured 2-8% more there) |
+| Sibling migrations (plan §5, `docs/migration.md`) | KdlBeef done (2026-10-03, its `e769dfc`..`57401fe`; equal or fewer instructions per byte in every mode; B1, B4 fixed). TomlBeef done (its `498f5dc`..`09041ef`; document -1% to -25%, streams -18% to -68%, write equal; B1, B2, B3 fixed; `migration.md` §9 "TomlBeef"). JsonBeef done (its `8a406f7`..`1ae6268`; every column equal or lower but canada's and floats' reads, at most +0.4%; write up to -7.4%; B1 (converters and subclasses) and B4 fixed; `migration.md` §9 "JsonBeef"). XmlBeef to do |
 
 ## Bugs found in the siblings (fixed in FormatCore; each sibling gets the fix when it migrates)
 
 | ID | Sibling | Bug | FormatCore |
 |----|---------|-----|------------|
-| B1 | all four generators | Converter/subtype lookups use `AlwaysVisible`: silently empty with a second dependent of the format library | `MappingDriver` + `Registry` (mixin stage); `tests/registry`. **Fixed in KdlBeef** (`aa49e58`, fixture `OkRegisteredConverter`, which the old generator fails) |
-| B2 | TomlBeef `TomlParser.Values.bf:898` | Slow-path float parse follows the current culture's decimal separator (confirmed on Linux with a `,` culture) | `DecimalParse.ParseDouble`; `ParseDouble_IgnoresTheCurrentCulture` |
-| B3 | TomlBeef `TomlEntryMap.bf:241` | Unseeded table hash (hash flooding) | `ByteHash` seeded per table, `OrderedMap`; `IndexTests` |
-| B4 | KdlBeef, XmlBeef, JsonBeef generators | `IntegerRange` minimum for uint64 is `int64.MinValue` | `IntegerBounds`; `IntegerBounds_UInt64StartsAtZero`. **Fixed in KdlBeef** (`aa49e58`) |
+| B1 | all four generators | Converter/subtype lookups use `AlwaysVisible`: silently empty with a second dependent of the format library | `MappingDriver` + `Registry` (mixin stage); `tests/registry`. **Fixed in KdlBeef** (`aa49e58`, fixture `OkRegisteredConverter`, which the old generator fails), **TomlBeef** (its `1a2d9ff`, the same fixture) and **JsonBeef** (`5ed8436`, fixtures `OkRegisteredConverter` and `OkPolymorphic`: the old generator lost the user's converters and subclasses) |
+| B2 | TomlBeef `TomlParser.Values.bf:898` | Slow-path float parse follows the current culture's decimal separator (confirmed on Linux with a `,` culture) | `DecimalParse.ParseDouble`; `ParseDouble_IgnoresTheCurrentCulture`. **Fixed in TomlBeef** (its `0e09716`, `FloatsIgnoreTheCurrentCulture`) |
+| B3 | TomlBeef `TomlEntryMap.bf:241` | Unseeded table hash (hash flooding) | `ByteHash` seeded per table, `OrderedMap`; `IndexTests`. **Fixed in TomlBeef** (its `86df468`, `TableIndexesAreSeededPerTable`) |
+| B4 | KdlBeef, XmlBeef, JsonBeef generators | `IntegerRange` minimum for uint64 is `int64.MinValue` | `IntegerBounds`; `IntegerBounds_UInt64StartsAtZero`. **Fixed in KdlBeef** (`aa49e58`) and **JsonBeef** (`5ed8436`) |
 | B5 | XmlBeef `XmlNameTable` hash | 4-7 byte keys OR two overlapping words (`<< 24`): keys differing in their first and last bytes collide under every seed (found in phase 5) | `ByteHash` (`<< 32`); `ByteHash_UsesEveryByte` |
 | B6 | all four (allocator path of typed reads) | corlib's `BumpAllocator(DestructorHandlingKind)` constructor ignores its argument; under `.Allow` an object read through the allocator deletes bump-owned Strings (`free(): invalid pointer`). Not yet checked in the siblings | noted; the toy format sets `DestructorHandling` after construction |
 
@@ -45,7 +45,9 @@ Last reviewed: 2026-10-03.
 
 | ID | Item | Size |
 |----|------|------|
-| M | Sibling migrations (plan §5, `docs/migration.md`): TomlBeef next (fixes B2, B3; Phase 7 cursor adapter), then XmlBeef (B5) and JsonBeef; one component at a time with instruction counts (`migration.md` §9) | — per step |
+| M | Sibling migrations (plan §5, `docs/migration.md`): XmlBeef (B5); one component at a time with instruction counts (`migration.md` §9) | — per step |
+| J | JsonBeef follow-ups: canada's and floats' reads stay +0.03-0.16 instructions per byte over 7959c3f (shared number paths, layout); `KeptSource` and `Marks` unused there (`migration.md` §9 "JsonBeef") | S |
+| T | TomlBeef follow-ups: `ShortestDouble.Append` for the canonical float (20% more than corlib's text on float writes, inside the zmij call: find out why); the shared `Planner`/`ValueSpec` for its generator (nesting and `T?`, its O9); the window cursor for memory input (2-8% more, spread over the parser) | M |
 | K | KdlBeef follow-ups that need FormatCore: `RangeTable`/`SideTable` adoption, the shared `Planner` for its generator, `bench/compare/run.sh` on the vendored `measure.sh`/`merge.sh` (its `status.md` item F) | M |
 | C | Generic `Compact` (GrowList records + `Tree.LiveOrder` + `SideTable.Remap` + a text-move hook) for KdlBeef/JsonBeef | M |
 | T | Phase 6 tooling rest: `svgplot.py`, fetch/build helpers, round-trip driver; `-bench-loop` in TomlTester before it adopts `instructions.sh` (KdlTester has it) | M |

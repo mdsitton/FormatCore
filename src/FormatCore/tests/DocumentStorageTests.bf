@@ -125,6 +125,14 @@ static class DocumentStorageTests
 		Test.Assert(ReadShell.ReadFileInto(path, 0, arena) case .Ok(let text) && text == content);
 		Test.Assert(ReadShell.ReadFileInto(path, 5, arena) case .Err(let arenaLimit) && arenaLimit.mKind == .ResourceLimitExceeded);
 		Test.Assert(ReadShell.ReadFileInto(missing, 0, arena) case .Err(let arenaMissing) && arenaMissing.mKind == .IoError);
+
+		// Appended to a String
+		let appended = scope String("prefix:");
+		Test.Assert(ReadShell.ReadFileText(path, 0, appended) case .Ok && appended == scope $"prefix:{content}");
+		Test.Assert(ReadShell.ReadFileText(path, 5, appended) case .Err(let textLimit) && textLimit.mKind == .ResourceLimitExceeded);
+		Test.Assert(ReadShell.ReadFileText(missing, 0, appended) case .Err(let textMissing) && textMissing.mKind == .IoError &&
+			textMissing.mMessage == "Cannot read the file");
+		Test.Assert(appended == scope $"prefix:{content}");
 		let empty = scope String();
 		TempPath(empty, "readshell-empty.tmp");
 		Test.Assert(File.WriteAllText(empty, "") case .Ok);

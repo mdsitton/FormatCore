@@ -161,7 +161,9 @@ internal class GrowList<T> where T : struct
 }
 
 /// A stack of bits, one per nesting level (JsonBeef's object/array bits): push, pop and read the top
-/// without allocating up to 64 levels, and in a growing array beyond.
+/// without allocating up to 64 levels, and in a growing array beyond. A reader that keeps its depth in
+/// a field of its own (to restore it, as JsonBeef's push reader does) uses `Set` and `Get` by level and
+/// leaves `Depth` alone.
 internal struct BitStack : IDisposable
 {
 	uint64 mLow;
@@ -180,21 +182,30 @@ internal struct BitStack : IDisposable
 	[Inline]
 	public void Push(bool bit) mut
 	{
-		if (mDepth < 64)
-		{
-			if (bit)
-				mLow |= 1UL << mDepth;
-			else
-				mLow &= ~(1UL << mDepth);
-			mDepth++;
-			return;
-		}
-		PushHigh(bit);
+		Set(mDepth, bit);
+		mDepth++;
 	}
 
-	void PushHigh(bool bit) mut
+	/// @brief Set the bit of `level` (0-based), growing the storage; the depth is unchanged.
+	/// @param level The level.
+	/// @param bit The bit.
+	[Inline]
+	public void Set(int level, bool bit) mut
 	{
-		int index = (mDepth - 64) >> 6;
+		if (level < 64)
+		{
+			if (bit)
+				mLow |= 1UL << level;
+			else
+				mLow &= ~(1UL << level);
+			return;
+		}
+		SetHigh(level, bit);
+	}
+
+	void SetHigh(int level, bool bit) mut
+	{
+		int index = (level - 64) >> 6;
 		if (mHigh == null || index >= mHigh.Count)
 		{
 			uint64[] old = mHigh;
@@ -205,25 +216,29 @@ internal struct BitStack : IDisposable
 				delete old;
 			}
 		}
-		uint64 mask = 1UL << ((mDepth - 64) & 63);
+		uint64 mask = 1UL << ((level - 64) & 63);
 		if (bit)
 			mHigh[index] |= mask;
 		else
 			mHigh[index] &= ~mask;
-		mDepth++;
+	}
+
+	/// @brief The bit of `level` (0-based), which must have been set or pushed.
+	/// @param level The level.
+	/// @return The bit.
+	[Inline]
+	public bool Get(int level)
+	{
+		if (level < 64)
+			return ((mLow >> level) & 1) != 0;
+		return ((mHigh[(level - 64) >> 6] >> ((level - 64) & 63)) & 1) != 0;
 	}
 
 	/// @brief The top bit (the stack must not be empty).
 	public bool Top
 	{
 		[Inline]
-		get
-		{
-			int at = mDepth - 1;
-			if (at < 64)
-				return ((mLow >> at) & 1) != 0;
-			return ((mHigh[(at - 64) >> 6] >> ((at - 64) & 63)) & 1) != 0;
-		}
+		get => Get(mDepth - 1);
 	}
 
 	/// @brief Remove the top bit.

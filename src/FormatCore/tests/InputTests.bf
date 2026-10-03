@@ -219,6 +219,14 @@ static class InputTests
 		int end = 0;
 		if (utf16.Begin(ref data, ref windowStart, ref end) case .Err(let error))
 			Test.Assert(error.mMessage == "The input is UTF-16LE (TOML must be UTF-8): transcode it first");
+		// A rule cited verbatim
+		var cited = settings;
+		cited.mUtf8Rule = "JSON must be UTF-8, RFC 8259 §8.1";
+		var json = ByteCursor<PlainUtf8Text>("\xFF\xFEa\0", cited);
+		if (json.Begin(ref data, ref windowStart, ref end) case .Err(let citedError))
+			Test.Assert(citedError.mMessage == "The input is UTF-16LE (JSON must be UTF-8, RFC 8259 §8.1): transcode it first");
+		else
+			Test.Assert(false);
 
 		// A BOM is skipped, or rejected
 		var bom = ByteCursor<PlainUtf8Text>("\u{FEFF}x", settings);

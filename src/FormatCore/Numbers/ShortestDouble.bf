@@ -147,10 +147,19 @@ internal static class ShortestDouble
 	/// @param value The double.
 	/// @param layout The layout.
 	/// @return False (and nothing written) for a NaN or an infinity.
+	[Inline]
 	public static bool Append(String output, double value, FloatLayout layout)
 	{
 		if (!value.IsFinite)
 			return false;
+		if (layout.mNotation != .Native)
+		{
+			// The digits out of line (Digits), the layout inlined into the caller
+			char8[32] digits = ?;
+			int count = Digits(value, &digits, let point);
+			AppendDigits(output, &digits, count, point, FloatBits.IsNegative(value), layout);
+			return true;
+		}
 		char8[64] text = ?;
 		int length = double.[Friend]ToString_RoundTripFast(value, &text);
 		AppendText(output, &text, length, FloatBits.IsNegative(value), layout);
@@ -175,14 +184,37 @@ internal static class ShortestDouble
 
 	static void AppendText(String output, char8* text, int length, bool negative, FloatLayout layout)
 	{
+		// Native restyles corlib's text as it is: no digits to take apart (the canonical writers' path)
+		if (layout.mNotation == .Native && !layout.mUnsignedZero)
+		{
+			AppendNative(output, text, length, layout);
+			return;
+		}
 		char8[32] digits = ?;
 		int count = DigitsOf(text, length, &digits, let point);
+		if (layout.mNotation == .Native)
+		{
+			// AppendNative writes the text's sign itself: here the sign is decided above (an unsigned zero)
+			if (negative && !(count == 0 && layout.mUnsignedZero))
+				output.Append('-');
+			AppendNative(output, text + (negative ? 1 : 0), length - (negative ? 1 : 0), layout);
+			return;
+		}
+		AppendDigits(output, &digits, count, point, negative, layout);
+	}
+
+	/// The EcmaScript and Scientific layouts of `count` digits with the point at `point`. Inlined, so a
+	/// caller with a constant layout gets its own copy with the layout's tests folded (JsonBeef's writer
+	/// measured 2.5% without).
+	[Inline]
+	static void AppendDigits(String output, char8* digits, int count, int point, bool negative, FloatLayout layout)
+	{
 		if (negative && !(count == 0 && layout.mUnsignedZero))
 			output.Append('-');
 		switch (layout.mNotation)
 		{
 		case .Native:
-			AppendNative(output, text, length, layout);
+			Runtime.FatalError("ShortestDouble: the Native layout needs corlib's text");
 		case .EcmaScript:
 			if (count == 0)
 			{
@@ -195,33 +227,36 @@ internal static class ShortestDouble
 			int k = count;
 			if (k <= n && n <= 21)
 			{
-				output.Append(&digits, k);
-				output.Append('0', n - k);
+				output.Append(digits, k);
+				// (No call for no zeros: most values have none)
+				if (n > k)
+					output.Append('0', n - k);
 				if (layout.mFraction != .None)
 					output.Append(".0");
 			}
 			else if (0 < n && n <= 21)
 			{
-				output.Append(&digits, n);
+				output.Append(digits, n);
 				output.Append('.');
-				output.Append(&digits[n], k - n);
+				output.Append(digits + n, k - n);
 			}
 			else if (-6 < n && n <= 0)
 			{
 				output.Append("0.");
-				output.Append('0', -n);
-				output.Append(&digits, k);
+				if (n < 0)
+					output.Append('0', -n);
+				output.Append(digits, k);
 			}
 			else
-				AppendScientific(output, &digits, k, n - 1, layout);
+				AppendScientific(output, digits, k, n - 1, layout);
 		case .Scientific:
 			if (count == 0)
 			{
-				digits[0] = '0';
-				AppendScientific(output, &digits, 1, 0, layout);
+				char8 zero = '0';
+				AppendScientific(output, &zero, 1, 0, layout);
 				return;
 			}
-			AppendScientific(output, &digits, count, point - 1, layout);
+			AppendScientific(output, digits, count, point - 1, layout);
 		}
 	}
 
@@ -271,28 +306,70 @@ internal static class ShortestDouble
 	[Inline]
 	static char8 Digit(char8* digits, int count, int i, bool reversed) => reversed ? digits[count - 1 - i] : digits[i];
 
-	/// corlib's text restyled: its mantissa (with `.0` per the rule) and its exponent's digits.
+	/// corlib's text restyled (its sign included): its mantissa (with `.0` per the rule) and its
+	/// exponent's digits, composed on the stack and appended in one call.
 	static void AppendNative(String output, char8* text, int length, FloatLayout layout)
 	{
-		int pos = text[0] == '-' ? 1 : 0;
-		int mantissaStart = pos;
+		// Most text has no exponent: one scan, then the text and perhaps `.0` as they are
+		int exponentAt = length;
+		bool hasDot = false;
+		for (int i < length)
+		{
+			char8 c = text[i];
+			if (c == '.')
+				hasDot = true;
+			else if (c == 'e' || c == 'E')
+			{
+				exponentAt = i;
+				break;
+			}
+		}
+		if (exponentAt == length)
+		{
+			output.Append(text, length);
+			if (!hasDot && layout.mFraction != .None)
+				output.Append(".0");
+			return;
+		}
+		char8[80] buffer = ?;
+		int n = 0;
+		int pos = 0;
 		bool hasPoint = false;
 		while (pos < length && text[pos] != 'e' && text[pos] != 'E')
 		{
-			if (text[pos] == '.')
-				hasPoint = true;
-			pos++;
+			char8 c = text[pos++];
+			hasPoint |= c == '.';
+			buffer[n++] = c;
 		}
-		output.Append(text + mantissaStart, pos - mantissaStart);
 		bool hasExponent = pos < length;
 		if (!hasPoint && (layout.mFraction == .Mantissa || (layout.mFraction == .Integral && !hasExponent)))
-			output.Append(".0");
-		if (!hasExponent)
-			return;
-		pos++;
-		bool negative = false;
-		if (pos < length && (text[pos] == '+' || text[pos] == '-'))
-			negative = text[pos++] == '-';
-		AppendExponent(output, negative, text + pos, length - pos, false, layout);
+		{
+			buffer[n++] = '.';
+			buffer[n++] = '0';
+		}
+		if (hasExponent)
+		{
+			pos++;
+			buffer[n++] = layout.mUpperExponent ? 'E' : 'e';
+			bool negativeExponent = false;
+			if (pos < length && (text[pos] == '+' || text[pos] == '-'))
+				negativeExponent = text[pos++] == '-';
+			if (negativeExponent)
+				buffer[n++] = '-';
+			else if (layout.mExponentPlus)
+				buffer[n++] = '+';
+			// The digits as given, trimmed or padded to the width
+			int first = pos;
+			if (layout.mExponentDigits > 0)
+			{
+				while (length - first > layout.mExponentDigits && text[first] == '0')
+					first++;
+				for (int pad = length - first; pad < layout.mExponentDigits; pad++)
+					buffer[n++] = '0';
+			}
+			for (int i = first; i < length; i++)
+				buffer[n++] = text[i];
+		}
+		output.Append(&buffer, n);
 	}
 }
