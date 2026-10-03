@@ -175,6 +175,12 @@ internal static class ShortestDouble
 
 	static void AppendText(String output, char8* text, int length, bool negative, FloatLayout layout)
 	{
+		// Native restyles corlib's text as it is: no digits to take apart (the canonical writers' path)
+		if (layout.mNotation == .Native && !layout.mUnsignedZero)
+		{
+			AppendNative(output, text, length, layout);
+			return;
+		}
 		char8[32] digits = ?;
 		int count = DigitsOf(text, length, &digits, let point);
 		if (negative && !(count == 0 && layout.mUnsignedZero))
@@ -182,7 +188,7 @@ internal static class ShortestDouble
 		switch (layout.mNotation)
 		{
 		case .Native:
-			AppendNative(output, text, length, layout);
+			AppendNative(output, text + (negative ? 1 : 0), length - (negative ? 1 : 0), layout);
 		case .EcmaScript:
 			if (count == 0)
 			{
@@ -271,28 +277,70 @@ internal static class ShortestDouble
 	[Inline]
 	static char8 Digit(char8* digits, int count, int i, bool reversed) => reversed ? digits[count - 1 - i] : digits[i];
 
-	/// corlib's text restyled: its mantissa (with `.0` per the rule) and its exponent's digits.
+	/// corlib's text restyled (its sign included): its mantissa (with `.0` per the rule) and its
+	/// exponent's digits, composed on the stack and appended in one call.
 	static void AppendNative(String output, char8* text, int length, FloatLayout layout)
 	{
-		int pos = text[0] == '-' ? 1 : 0;
-		int mantissaStart = pos;
+		// Most text has no exponent: one scan, then the text and perhaps `.0` as they are
+		int exponentAt = length;
+		bool hasDot = false;
+		for (int i < length)
+		{
+			char8 c = text[i];
+			if (c == '.')
+				hasDot = true;
+			else if (c == 'e' || c == 'E')
+			{
+				exponentAt = i;
+				break;
+			}
+		}
+		if (exponentAt == length)
+		{
+			output.Append(text, length);
+			if (!hasDot && layout.mFraction != .None)
+				output.Append(".0");
+			return;
+		}
+		char8[80] buffer = ?;
+		int n = 0;
+		int pos = 0;
 		bool hasPoint = false;
 		while (pos < length && text[pos] != 'e' && text[pos] != 'E')
 		{
-			if (text[pos] == '.')
-				hasPoint = true;
-			pos++;
+			char8 c = text[pos++];
+			hasPoint |= c == '.';
+			buffer[n++] = c;
 		}
-		output.Append(text + mantissaStart, pos - mantissaStart);
 		bool hasExponent = pos < length;
 		if (!hasPoint && (layout.mFraction == .Mantissa || (layout.mFraction == .Integral && !hasExponent)))
-			output.Append(".0");
-		if (!hasExponent)
-			return;
-		pos++;
-		bool negative = false;
-		if (pos < length && (text[pos] == '+' || text[pos] == '-'))
-			negative = text[pos++] == '-';
-		AppendExponent(output, negative, text + pos, length - pos, false, layout);
+		{
+			buffer[n++] = '.';
+			buffer[n++] = '0';
+		}
+		if (hasExponent)
+		{
+			pos++;
+			buffer[n++] = layout.mUpperExponent ? 'E' : 'e';
+			bool negativeExponent = false;
+			if (pos < length && (text[pos] == '+' || text[pos] == '-'))
+				negativeExponent = text[pos++] == '-';
+			if (negativeExponent)
+				buffer[n++] = '-';
+			else if (layout.mExponentPlus)
+				buffer[n++] = '+';
+			// The digits as given, trimmed or padded to the width
+			int first = pos;
+			if (layout.mExponentDigits > 0)
+			{
+				while (length - first > layout.mExponentDigits && text[first] == '0')
+					first++;
+				for (int pad = length - first; pad < layout.mExponentDigits; pad++)
+					buffer[n++] = '0';
+			}
+			for (int i = first; i < length; i++)
+				buffer[n++] = text[i];
+		}
+		output.Append(&buffer, n);
 	}
 }
