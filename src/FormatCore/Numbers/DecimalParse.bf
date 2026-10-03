@@ -309,21 +309,32 @@ internal static class DecimalParse
 	/// testing the fast path against it, and for a reader that tried Clinger's path itself.
 	/// @param text The number text.
 	/// @param value Receives the double.
-	/// @param separators Whether the text may hold underscores (false: no scan for them, no copy).
+	/// @param separators Whether the text may hold underscores (false: no scan for them, no copy). A
+	/// constant folds the choice: the plain path has no stack buffer (JsonBeef's canada read measured
+	/// 2.5% with one).
 	/// @return False when the text is not a decimal number.
+	[Inline]
 	public static bool ParseDoubleSlow(StringView text, out double value, bool separators = true)
 	{
-		value = 0;
-		StringView body;
-		bool negative;
 		if (separators)
-		{
-			int capacity = Math.Max(text.Length, 1);
-			char8* buffer = capacity <= 256 ? scope:: char8[256]* : scope:: char8[capacity]*;
-			body = Unsigned(text, buffer, capacity, out negative);
-		}
-		else
-			body = Unsigned(text, out negative);
+			return ParseDoubleSeparated(text, out value);
+		return ParseDoubleUnsigned(Unsigned(text, let negative), negative, out value);
+	}
+
+	static bool ParseDoubleSeparated(StringView text, out double value)
+	{
+		int capacity = Math.Max(text.Length, 1);
+		char8* buffer = capacity <= 256 ? scope:: char8[256]* : scope:: char8[capacity]*;
+		StringView body = Unsigned(text, buffer, capacity, let negative);
+		return ParseDoubleUnsigned(body, negative, out value);
+	}
+
+	/// corlib's fast_float on unsigned text, with `.` as the decimal point (inlined: no call layer between
+	/// a reader and corlib).
+	[Inline]
+	static bool ParseDoubleUnsigned(StringView body, bool negative, out double value)
+	{
+		value = 0;
 		if (body.IsEmpty)
 			return false;
 		double result = 0;
@@ -339,19 +350,25 @@ internal static class DecimalParse
 	/// @param value Receives the float.
 	/// @param separators Whether the text may hold underscores.
 	/// @return False when the text is not a decimal number.
+	[Inline]
 	public static bool ParseFloat32(StringView text, out float value, bool separators = true)
 	{
-		value = 0;
-		StringView body;
-		bool negative;
 		if (separators)
-		{
-			int capacity = Math.Max(text.Length, 1);
-			char8* buffer = capacity <= 256 ? scope:: char8[256]* : scope:: char8[capacity]*;
-			body = Unsigned(text, buffer, capacity, out negative);
-		}
-		else
-			body = Unsigned(text, out negative);
+			return ParseFloat32Separated(text, out value);
+		return ParseFloat32Unsigned(Unsigned(text, let negative), negative, out value);
+	}
+
+	static bool ParseFloat32Separated(StringView text, out float value)
+	{
+		int capacity = Math.Max(text.Length, 1);
+		char8* buffer = capacity <= 256 ? scope:: char8[256]* : scope:: char8[capacity]*;
+		StringView body = Unsigned(text, buffer, capacity, let negative);
+		return ParseFloat32Unsigned(body, negative, out value);
+	}
+
+	static bool ParseFloat32Unsigned(StringView body, bool negative, out float value)
+	{
+		value = 0;
 		if (body.IsEmpty)
 			return false;
 		float result = 0;
@@ -361,9 +378,43 @@ internal static class DecimalParse
 		return true;
 	}
 
-	/// The magnitude of `[sign]digits` (underscores skipped), if it fits uint64: 19 significant digits
-	/// always fit, so only a 20th is checked against 2^64 - 1 (JsonBeef's: no division per digit).
-	static bool TryParseMagnitude(StringView text, out uint64 magnitude, out bool negative)
+	/// The magnitude of `[sign]digits`, if it fits uint64; underscores skipped when `separators`.
+	[Inline]
+	static bool TryParseMagnitude(StringView text, out uint64 magnitude, out bool negative, bool separators)
+	{
+		if (separators)
+			return TryParseMagnitudeSeparated(text, out magnitude, out negative);
+		return TryParseMagnitudePlain(text, out magnitude, out negative);
+	}
+
+	/// JsonBeef's: at most 20 digits, the 20th checked against 2^64 - 1.
+	static bool TryParseMagnitudePlain(StringView text, out uint64 magnitude, out bool negative)
+	{
+		magnitude = 0;
+		negative = text.Length > 0 && text[0] == '-';
+		int pos = (text.Length > 0 && (text[0] == '-' || text[0] == '+')) ? 1 : 0;
+		int digits = text.Length - pos;
+		if (digits == 0 || digits > 20)
+		{
+			// (Leading zeros past 20 digits: the general loop)
+			return digits > 20 && TryParseMagnitudeSeparated(text, out magnitude, out negative);
+		}
+		for (int i = pos; i < text.Length; i++)
+		{
+			uint8 digit = (uint8)text[i] - (uint8)'0';
+			if (digit > 9)
+				return false;
+			// 19 digits always fit; the 20th may overflow
+			if (i - pos == 19 && (magnitude > 1844674407370955161UL || (magnitude == 1844674407370955161UL && digit > 5)))
+				return false;
+			magnitude = magnitude * 10 + digit;
+		}
+		return true;
+	}
+
+	/// The magnitude with underscores skipped: 19 significant digits always fit, so only a 20th is
+	/// checked against 2^64 - 1 (no division per digit).
+	static bool TryParseMagnitudeSeparated(StringView text, out uint64 magnitude, out bool negative)
 	{
 		magnitude = 0;
 		negative = text.Length > 0 && text[0] == '-';
@@ -391,11 +442,12 @@ internal static class DecimalParse
 	/// @brief The int64 of a decimal integer `[sign]digits` (underscores skipped), if it fits.
 	/// @param text The integer text.
 	/// @param value Receives the value.
+	/// @param separators Whether the text may hold underscores (false for JSON).
 	/// @return Whether it is an integer that fits.
-	public static bool TryParseInt64(StringView text, out int64 value)
+	public static bool TryParseInt64(StringView text, out int64 value, bool separators = true)
 	{
 		value = 0;
-		if (!TryParseMagnitude(text, let magnitude, let negative))
+		if (!TryParseMagnitude(text, let magnitude, let negative, separators))
 			return false;
 		if (negative)
 		{
@@ -414,11 +466,12 @@ internal static class DecimalParse
 	/// does; other negative values do not).
 	/// @param text The integer text.
 	/// @param value Receives the value.
+	/// @param separators Whether the text may hold underscores (false for JSON).
 	/// @return Whether it is an integer that fits.
-	public static bool TryParseUInt64(StringView text, out uint64 value)
+	public static bool TryParseUInt64(StringView text, out uint64 value, bool separators = true)
 	{
 		value = 0;
-		if (!TryParseMagnitude(text, let magnitude, let negative))
+		if (!TryParseMagnitude(text, let magnitude, let negative, separators))
 			return false;
 		if (negative && magnitude != 0)
 			return false;
@@ -428,12 +481,13 @@ internal static class DecimalParse
 
 	/// @brief What the value of a decimal integer `[sign]digits` fits (JsonBeef's Classify for integers).
 	/// @param text A valid integer text.
+	/// @param separators Whether the text may hold underscores (false for JSON).
 	/// @return Int64, UInt64 or Big.
-	public static IntegerClass ClassifyInteger(StringView text)
+	public static IntegerClass ClassifyInteger(StringView text, bool separators = true)
 	{
-		if (TryParseInt64(text, ?))
+		if (TryParseInt64(text, ?, separators))
 			return .Int64;
-		if (TryParseUInt64(text, ?))
+		if (TryParseUInt64(text, ?, separators))
 			return .UInt64;
 		return .Big;
 	}
