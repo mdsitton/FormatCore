@@ -1,15 +1,13 @@
 FileVersion = 1
 
+# FormatCore.Testing's own [Test]s: beefbuild -test runs only the first project listed, so this project
+# has its own workspace (beefbuild -test -workspace=Testing, or run the scripts from this directory).
 [Workspace]
-StartupProject = "FormatCore"
+StartupProject = "FormatCore.Testing"
 
-# beefbuild -test runs the [Test]s of the first project listed only (not those of the others, nor of
-# its dependencies): FormatCore.Testing's run in its own workspace, `beefbuild -test -workspace=Testing`.
-# It is listed here too so that every build compiles it.
 [Projects]
-FormatCore = {Path = "."}
-# Test and benchmark helpers for the format libraries' testers (never a dependency of a library)
-"FormatCore.Testing" = {Path = "Testing"}
+"FormatCore.Testing" = {Path = "."}
+FormatCore = {Path = ".."}
 
 # Runs the [Test] methods with Release settings (O2, CRT allocator, no runtime checks):
 #   beefbuild -test -config=TestRelease
