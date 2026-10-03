@@ -1,6 +1,13 @@
 # What tools/sync.sh copies into a repository: source (in FormatCore), destination (in the target),
 # and the condition: "always", or a path that must exist in the target for the file to be vendored
-# there (a repository without a codegen fixture workspace gets no test-codegen.sh).
+# there (a repository without a codegen fixture workspace gets no test-codegen.sh, one without a
+# bench/compare no bench-kit). docs/agents-common.md goes into AGENTS.md's marked region (sync.sh).
 tools/test-leaks.sh	test-leaks.sh	always
 tools/win-test.sh	win-test.sh	always
 tools/test-codegen.sh	test-codegen.sh	tests/codegen
+tools/test-lib.sh	tools/test-lib.sh	always
+bench-kit/merge.sh	bench/compare/merge.sh	bench/compare
+bench-kit/measure.sh	bench/compare/measure.sh	bench/compare
+bench-kit/bench-core.h	bench/compare/c/bench-core.h	bench/compare/c
+bench-kit/maxrss.c	bench/compare/c/maxrss.c	bench/compare/c
+bench-kit/instructions.sh	bench/instructions.sh	bench/instructions.conf
