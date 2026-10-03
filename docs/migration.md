@@ -187,3 +187,40 @@ Lessons for TomlBeef, XmlBeef and JsonBeef:
   KdlBeef's `OkRegisteredConverter` fixture (a converter in the user's project, a second project
   depending on the library); add that fixture to each sibling as its bug-1 regression.
 - `box` is a reserved word in Beef (a fixture named a local `box` and failed to parse).
+
+### TomlBeef: done (2026-10-03)
+
+TomlBeef moved in ten commits (`498f5dc`..; its `docs/status.md` has the instruction-count table):
+tooling and `-bench-loop`; the dependency and B2 (`DecimalParse.ParseDouble`); B3 (`TomlEntryMap` is
+`OrderedMap<TomlTableSlot, const 8>`); UTF-8/hex helpers; `TomlParseError`/`TomlDiagnostic` typealiases
+with the parser on an empty failure token; numbers; `TextArena` and `ReadShell`; `[TomlObject]` on
+`MappingDriver` (B1; 10 build fixtures); streams on the window cursor (plan phase 7). Against `cd799f0`:
+document -1% to -25% (arrays 179 → 134), preserve -2% to -12%, stream and stream1k -18% to -68%
+(comments 30.7 → 9.9), write equal. Its 327 tests, the four suite scripts in Debug and Release, the
+official toml-test suite, leaks and Windows pass.
+
+Lessons for XmlBeef and JsonBeef:
+
+- **Beef converts any struct to an empty struct implicitly.** An empty failure token
+  (`struct TomlFailure {}`) made `.Err(TomlParseError(...))` compile and drop the error silently (the
+  wrong error came out later: the kind of one, the message of another). Give the token a field (a
+  `uint8`), so a missing `Raise` is a compile error. XmlBeef's and JsonBeef's `XmlFailure`/`JsonFailure`
+  are empty structs today: check that nothing converts into them by accident.
+- **TOML's full-error Results were the cost, not the error's size alone**: switching to the larger
+  `ParseError` made document reads 4-13% slower until the parser failed with an empty token; then they
+  were 6-25% faster than before the move.
+- **`OrderedMap` needed `OpenIdIndex.RebuildDistinct`** (no key compares when rebuilding an index of
+  distinct keys): without it, many small tables crossing the scan limit cost 2%.
+- **Integer fast path first**: `DecimalParse.TryParsePlainInteger` before `TryParsePlain` (integers are
+  the common bare value; the combined parse cost arrays/ints 1-2%).
+- **`ShortestDouble.Append` cost 20% more than corlib's `ToString` on float-heavy writes**, with the
+  extra instructions inside the zmij call itself (unexplained; same values, same output). TomlBeef keeps
+  corlib's text for its canonical float. Measure it before JsonBeef or KdlBeef adopt it on a writer.
+- **The window cursor over `ByteCursor` measured 2-8% more on TOML's document reads**, spread over the
+  parser (no single function); TOML's memory input keeps its own span cursor after `ByteCursor.Begin`'s
+  checks, and only streams read through the window (where it was 20-68% cheaper). For a sibling whose
+  core already reads a window (KDL, XML, JSON) this does not apply.
+- **Windows Debug**: two `scope $"..."` strings inside one `&&` in a loop failed a test there only;
+  build such strings once per round.
+- Column counts called per statement are short: count fewer than 32 bytes inline, longer spans with
+  `Utf8.CountCodePoints` (a call per short column cost more than the old byte loop).
