@@ -63,6 +63,11 @@ internal struct PlainUtf8Text : ITextPolicy
 	[Inline]
 	public static bool IsPlainWord(uint64 word) => Swar.IsAscii(word);
 
+	/// One test of the four words' high bits (the default's four early-out tests cost TomlBeef's
+	/// document reads 0.1 instructions per byte).
+	[Inline]
+	public static bool IsPlainBlock(uint64 a, uint64 b, uint64 c, uint64 d) => ((a | b | c | d) & Swar.High) == 0;
+
 	[Inline]
 	public static bool AllowsAscii(uint8 b) => true;
 

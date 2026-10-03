@@ -147,8 +147,21 @@ internal static class ShortestDouble
 	/// @param value The double.
 	/// @param layout The layout.
 	/// @return False (and nothing written) for a NaN or an infinity.
-	[Inline]
 	public static bool Append(String output, double value, FloatLayout layout)
+	{
+		return AppendInline(output, value, layout);
+	}
+
+	/// @brief Append, inlined into the caller: with a constant EcmaScript or Scientific layout the
+	/// layout's tests fold (JsonBeef's writer measured 2.5% fewer instructions). Use it only on such a
+	/// hot path: inlined into KdlBeef's writer (a Native layout), it cost 0.2 instructions per byte on
+	/// every input, floats or not.
+	/// @param output The string to append to.
+	/// @param value The double.
+	/// @param layout The layout (constant at the call).
+	/// @return False (and nothing written) for a NaN or an infinity.
+	[Inline]
+	public static bool AppendInline(String output, double value, FloatLayout layout)
 	{
 		if (!value.IsFinite)
 			return false;
@@ -160,10 +173,18 @@ internal static class ShortestDouble
 			AppendDigits(output, &digits, count, point, FloatBits.IsNegative(value), layout);
 			return true;
 		}
+		AppendNativeDouble(output, value, layout);
+		return true;
+	}
+
+	/// The Native layouts (the canonical writers'), out of line: corlib's 64-byte text buffer stays out
+	/// of an inlining caller's frame.
+	[NoInline]
+	static void AppendNativeDouble(String output, double value, FloatLayout layout)
+	{
 		char8[64] text = ?;
 		int length = double.[Friend]ToString_RoundTripFast(value, &text);
 		AppendText(output, &text, length, FloatBits.IsNegative(value), layout);
-		return true;
 	}
 
 	/// @brief Append the shortest text that reads back as the float (binary32) `value` (`0.1`, not the
