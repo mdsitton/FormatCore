@@ -7,5 +7,5 @@ namespace FormatCore;
 public static class FormatCoreVersion
 {
 	/// @brief Semantic version of the shared core.
-	public const String Version = "0.1.2";
+	public const String Version = "0.1.3";
 }

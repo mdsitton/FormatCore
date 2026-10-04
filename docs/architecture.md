@@ -142,6 +142,9 @@ which order; this file records the design as built. Each section names the sibli
 - Detection is a static generic hook, `IEncodingDetector`; `Bom.Detect`/`BomDetector` cover BOMs,
   UTF-7, EBCDIC, unusual UCS-4 orders and RFC 4627 zero patterns. XML supplies its own detector (the
   declaration), which may report the prefix incomplete (it then doubles, up to MaxTokenBytes).
+  `Bom.DetectFirstCharacter`/`FirstCharacterDetector` (0.1.3, for YamlBeef) are YAML 1.2.2 §5.2's
+  table: only the first character must be ASCII, so a one-character UTF-16 document, or `a中`, is found
+  (Detect's four-byte patterns need two ASCII characters).
 - `Transcoding.Prepare` (memory), `TranscodingByteCursor` and `TranscodingStreamCursor` implement
   `IInputCursor` with offsets in the UTF-8 text; decoding errors are `InputErrorKind.InvalidEncoding`.
 

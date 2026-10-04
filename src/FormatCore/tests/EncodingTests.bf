@@ -240,6 +240,33 @@ static class EncodingTests
 		Rejects("\x00\x00<\x00", "UCS-4 in the unusual byte orders 2143 and 3412 is not supported");
 	}
 
+	static void DetectsFirst(StringView prefix, TextEncoding encoding, int skip, bool utf8Bom = false, bool undeclared = false)
+	{
+		let detection = Bom.DetectFirstCharacter(prefix);
+		Test.Assert(detection.mEncoding == encoding && detection.mSkip == skip && detection.mUtf8Bom == utf8Bom && detection.mUndeclared == undeclared);
+	}
+
+	[Test]
+	public static void Bom_DetectFirstCharacter()
+	{
+		// YAML 1.2.2 §5.2's table, in its order
+		DetectsFirst("\x00\x00\xFE\xFF", .Utf32BE, 4);
+		DetectsFirst("\x00\x00\x00a", .Utf32BE, 0);
+		DetectsFirst("\xFF\xFE\x00\x00", .Utf32LE, 4);
+		DetectsFirst("a\x00\x00\x00", .Utf32LE, 0);
+		DetectsFirst("\xFE\xFF\x00a", .Utf16BE, 2);
+		DetectsFirst("\x00a", .Utf16BE, 0);
+		DetectsFirst("\xFF\xFEa\x00", .Utf16LE, 2);
+		DetectsFirst("a\x00", .Utf16LE, 0);
+		DetectsFirst("\xEF\xBB\xBFa", .Utf8, 0, true);
+		DetectsFirst("a: 1", .Utf8, 0, false, true);
+		DetectsFirst("", .Utf8, 0, false, true);
+		// What Detect misses: a second character above U+00FF (`a中` in UTF-16)
+		DetectsFirst("a\x00\x2D\x4E", .Utf16LE, 0);
+		DetectsFirst("\x00a\x4E\x2D", .Utf16BE, 0);
+		Detects("a\x00\x2D\x4E", .Utf8, 0, false, true);
+	}
+
 	[Test]
 	public static void Wide_AsciiRunsMeetOtherCharacters()
 	{

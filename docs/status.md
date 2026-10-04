@@ -1,12 +1,13 @@
 # FormatCore status
 
-Last reviewed: 2026-10-03.
+Last reviewed: 2026-10-04 (0.1.3: `Bom.DetectFirstCharacter` and `FirstCharacterDetector`, YAML's
+encoding detection, for YamlBeef; nothing else changed).
 
 ## Verification baseline
 
 | Check | Expected result |
 |-------|-----------------|
-| `beefbuild -test` (Debug checks) | FormatCore 70/70, FormatCore.Testing 5/5, ToyTests 7/7 |
+| `beefbuild -test` (Debug checks) | FormatCore 71/71, FormatCore.Testing 5/5, ToyTests 7/7 |
 | `beefbuild -test -config=TestRelease` (Release settings) | the same |
 | `bash ./test-leaks.sh` | PASS: no leaks detected |
 | `bash ./test-codegen.sh` | 13/13 fixtures as expected |

@@ -106,6 +106,42 @@ internal static class Bom
 		return detection;
 	}
 
+	/// @brief Detects the encoding as YAML does (YAML 1.2.2 §5.2), from the first character alone: a
+	/// UTF-32 or UTF-16 byte order mark, or the zero bytes around a first character that must be ASCII
+	/// (`00 00 00 xx` UTF-32BE, `xx 00 00 00` UTF-32LE, `00 xx` UTF-16BE, `xx 00` UTF-16LE), the UTF-8
+	/// byte order mark (kept), else UTF-8. Unlike Detect, it needs no second ASCII character, so a
+	/// one-character UTF-16 document, or one whose second character is above U+00FF (`a中`), is found.
+	/// @param prefix The input's first bytes (at least 4, or all of it).
+	/// @return What was found (never an error: every prefix maps to an encoding).
+	public static EncodingDetection DetectFirstCharacter(StringView prefix)
+	{
+		uint8* b = (uint8*)prefix.Ptr;
+		int n = prefix.Length;
+		if (n >= 4 && b[0] == 0x00 && b[1] == 0x00 && b[2] == 0xFE && b[3] == 0xFF)
+			return Wide(.Utf32BE, 4);
+		if (n >= 4 && b[0] == 0x00 && b[1] == 0x00 && b[2] == 0x00)
+			return Wide(.Utf32BE, 0);
+		if (n >= 4 && b[0] == 0xFF && b[1] == 0xFE && b[2] == 0x00 && b[3] == 0x00)
+			return Wide(.Utf32LE, 4);
+		if (n >= 4 && b[0] != 0x00 && b[1] == 0x00 && b[2] == 0x00 && b[3] == 0x00)
+			return Wide(.Utf32LE, 0);
+		if (n >= 2 && b[0] == 0xFE && b[1] == 0xFF)
+			return Wide(.Utf16BE, 2);
+		if (n >= 2 && b[0] == 0x00)
+			return Wide(.Utf16BE, 0);
+		if (n >= 2 && b[0] == 0xFF && b[1] == 0xFE)
+			return Wide(.Utf16LE, 2);
+		if (n >= 2 && b[1] == 0x00)
+			return Wide(.Utf16LE, 0);
+		EncodingDetection detection = .();
+		detection.mEncoding = .Utf8;
+		if (Utf8.StartsWithBom(prefix.Ptr, n))
+			detection.mUtf8Bom = true;
+		else
+			detection.mUndeclared = true;
+		return detection;
+	}
+
 	static EncodingDetection Wide(TextEncoding encoding, int skip)
 	{
 		EncodingDetection detection = .();
@@ -128,6 +164,28 @@ internal struct BomDetector : IEncodingDetector
 	{
 		declared.Clear();
 		return Bom.Detect(prefix);
+	}
+
+	public static void AppendUndecided(String message, int maxTokenBytes)
+	{
+		message.AppendF("The input's encoding is not known after MaxTokenBytes ({})", maxTokenBytes);
+	}
+}
+
+/// The detector of a format whose input's first character shows its encoding (YAML 1.2.2 §5.2):
+/// Bom.DetectFirstCharacter on the first 4 bytes.
+internal struct FirstCharacterDetector : IEncodingDetector
+{
+	public static int PrefixBytes
+	{
+		[Inline]
+		get => 4;
+	}
+
+	public static Result<EncodingDetection, InputError> Detect(StringView prefix, String declared, String scratch)
+	{
+		declared.Clear();
+		return Bom.DetectFirstCharacter(prefix);
 	}
 
 	public static void AppendUndecided(String message, int maxTokenBytes)
