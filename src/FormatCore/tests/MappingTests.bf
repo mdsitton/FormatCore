@@ -88,6 +88,36 @@ static class MappingTests
 		Test.Assert(TypeShapes.ScalarKind(typeof(char8)) == .Unsupported && TypeShapes.ScalarKind(typeof(float)) == .Float);
 	}
 
+	class ClassScalar
+	{
+	}
+
+	struct StructScalar
+	{
+	}
+
+	[Test]
+	public static void ValueSpec_OwnedFormatScalars()
+	{
+		// A format's scalar that is a class is owned like an object (a List of them deletes them); a
+		// struct (TOML's date/times) owns nothing
+		let spec = scope ValueSpec();
+		spec.mKind = .FormatScalar;
+		spec.mType = typeof(ClassScalar);
+		Test.Assert(spec.NeedsDelete && spec.CanBeNull);
+		spec.mType = typeof(StructScalar);
+		Test.Assert(!spec.NeedsDelete && !spec.CanBeNull);
+		let list = scope ValueSpec();
+		list.mKind = .List;
+		list.mType = typeof(List<ClassScalar>);
+		list.mItem = new .();
+		list.mItem.mKind = .FormatScalar;
+		list.mItem.mType = typeof(ClassScalar);
+		let code = scope String();
+		Ownership.EmitClearItems(code, "", list, "items");
+		Test.Assert(code.Contains("delete "));
+	}
+
 	[Test]
 	public static void CodeWriter_WrapsInThePath()
 	{

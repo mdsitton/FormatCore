@@ -56,7 +56,7 @@ internal class ValueSpec
 	}
 
 	/// @brief Whether a value of this spec owns heap objects to delete when it is replaced (a String, a
-	/// class, a List, a Dictionary).
+	/// class, a List, a Dictionary; a format's scalar that is a class, as YamlBeef's YamlBinary).
 	public bool NeedsDelete
 	{
 		get
@@ -65,7 +65,7 @@ internal class ValueSpec
 			{
 			case .String, .List, .Dictionary:
 				return true;
-			case .Object, .Converter:
+			case .Object, .Converter, .FormatScalar:
 				return !mType.IsValueType;
 			default:
 				return false;

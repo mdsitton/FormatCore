@@ -160,7 +160,9 @@ which order; this file records the design as built. Each section names the sibli
   rule, and stops the build through `MappingError` with self-contained `[Prefix] Owner.field: …`
   messages.
 - Kit: `Literal`, `IntegerBounds` (**uint64's minimum is 0**: bug 4), `CodeWriter`, `EnumEmit` (case
-  names follow the naming of the level that declares the field, JsonBeef's rule), `Ownership`.
+  names follow the naming of the level that declares the field, JsonBeef's rule), `Ownership`
+  (`ValueSpec.NeedsDelete`: Strings, containers, and objects, converter values and format scalars
+  that are classes, such as YamlBeef's `YamlBinary` since 0.1.4; TOML's date/times are structs).
 - `MappingDriver`: `ApplyToType` emits signatures and a `[Comptime]` entry method into the user's
   type; every body is `Compiler.Mixin(<entry>(part))`. `Registry` lookups (converters, subtypes) run
   there, so "current" is the user's project: they see it and its dependencies, whatever else depends
